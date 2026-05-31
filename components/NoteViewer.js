@@ -2,8 +2,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createNote, updateNoteData } from "@/lib/storage";
 import { saveImage, removeImage, loadImageUrl } from "@/lib/imageStore";
-import { toast } from "sonner";
-import { FiSearch, FiX, FiChevronUp, FiChevronDown, FiImage, FiLoader, FiCheck } from "react-icons/fi";
+import { notify } from "@/lib/notify";
+import { FiSearch, FiX, FiChevronUp, FiChevronDown, FiImage, FiLoader, FiCheck, FiMoreHorizontal, FiHash, FiCopy } from "react-icons/fi";
 
 function escHtml(str) {
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -49,6 +49,16 @@ export default function NoteViewer({ note, folderId, onSave, onClose }) {
     const [noteCreated, setNoteCreated] = useState(!!note?.id); // for showing images row
     const [inSearch, setInSearch] = useState("");
     const [matchIdx, setMatchIdx] = useState(0);
+    const [sumResult, setSumResult] = useState(null);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const menuRef = useRef(null);
+
+    useEffect(() => {
+        if (!menuOpen) return;
+        const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, [menuOpen]);
 
     const taRef = useRef(null);
     const bdRef = useRef(null);
@@ -115,7 +125,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose }) {
                 setSaveStatus("saved");
                 setTimeout(() => setSaveStatus("idle"), 2000);
             } catch (err) {
-                toast.error("Failed to save: " + err.message);
+                notify("Failed to save: " + err.message, "error");
                 setSaveStatus("idle");
             }
         }, 800);
@@ -126,7 +136,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose }) {
     const handleImageUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        if (!noteIdRef.current) { toast.error("Pehle note ka title likho, phir image daalo"); return; }
+        if (!noteIdRef.current) { notify("Pehle note ka title likho, phir image daalo", "error"); return; }
         setUploading(true);
         try {
             const id = Date.now().toString(36) + Math.random().toString(36).slice(2);
@@ -136,8 +146,8 @@ export default function NoteViewer({ note, folderId, onSave, onClose }) {
             setImages(newImgs);
             setImgUrls((p) => ({ ...p, [id]: url }));
             updateNoteData(noteIdRef.current, title, content, newImgs);
-            toast.success("Image attached!");
-        } catch { toast.error("Failed to upload image"); }
+            notify("Image attached!");
+        } catch { notify("Failed to upload image", "error"); }
         finally { setUploading(false); e.target.value = ""; }
     };
 
@@ -146,7 +156,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose }) {
         const newImgs = images.filter((_, i) => i !== idx);
         setImages(newImgs);
         if (noteIdRef.current) updateNoteData(noteIdRef.current, title, content, newImgs);
-        toast.success("Image removed");
+        notify("Image removed");
     };
 
     const sharedTextStyle = {
@@ -161,6 +171,17 @@ export default function NoteViewer({ note, folderId, onSave, onClose }) {
 
     const highlightedHtml = buildHighlightHtml(content, inSearch, matches, matchIdx);
 
+    const handleSum = () => {
+        const nums = [...content.matchAll(/\d+(?:\.\d+)?/g)].map((m) => parseFloat(m[0]));
+        if (nums.length === 0) { setSumResult({ nums: [], total: 0 }); return; }
+        setSumResult({ nums, total: nums.reduce((a, b) => a + b, 0) });
+    };
+
+    const handleCopy = () => {
+        const full = title ? `${title}\n\n${content}` : content;
+        navigator.clipboard.writeText(full).then(() => notify("Note copied!"));
+    };
+
     const isDesktop = typeof window !== "undefined" && window.innerWidth >= 640;
     const panelStyle = isDesktop
         ? {
@@ -169,6 +190,9 @@ export default function NoteViewer({ note, folderId, onSave, onClose }) {
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
+            willChange: "transform",
+            backfaceVisibility: "hidden",
+            WebkitBackfaceVisibility: "hidden",
             width: "min(calc(100vw - 2rem), 56rem)",
             height: "88svh",
             borderRadius: "0.75rem",
@@ -202,17 +226,8 @@ export default function NoteViewer({ note, folderId, onSave, onClose }) {
             />
             {/* Modal panel */}
             <div style={panelStyle}>
-                {/* Close button — always pinned top-right */}
-                <button
-                    onClick={onClose}
-                    style={{ position: "absolute", top: 10, right: 10, zIndex: 99 }}
-                    className="w-10 h-10 flex items-center justify-center rounded-lg bg-muted text-foreground hover:bg-destructive/20 hover:text-destructive transition-colors"
-                >
-                    <FiX size={22} />
-                </button>
-
                 {/* Title area — accented */}
-                <div className="flex items-center gap-3 px-5 pt-4 pb-3 pr-14 border-b-2 border-primary/60 bg-card/70">
+                <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b-2 border-primary/60 bg-card/70">
                     <div className="w-1 h-7 rounded-full bg-primary shrink-0" />
                     <input
                         autoFocus
@@ -221,12 +236,69 @@ export default function NoteViewer({ note, folderId, onSave, onClose }) {
                         onChange={(e) => setTitle(e.target.value)}
                         className="flex-1 bg-transparent text-foreground text-lg font-bold placeholder:text-muted-foreground/50 focus:outline-none tracking-wide min-w-0"
                     />
-                    {/* Auto-save status indicator */}
-                    <span className="shrink-0 flex items-center gap-1 text-xs">
+                    {/* Auto-save status + three-dots menu */}
+                    <span className="shrink-0 flex items-center gap-2 text-xs">
                         {saveStatus === "saving" && <><FiLoader size={12} className="animate-spin text-muted-foreground" /><span className="text-muted-foreground">Saving...</span></>}
                         {saveStatus === "saved" && <><FiCheck size={12} className="text-green-500" /><span className="text-green-500">Saved</span></>}
+                        {/* Custom inline menu — avoids z-index portal issues */}
+                        <div ref={menuRef} style={{ position: "relative" }}>
+                            <button
+                                onClick={() => setMenuOpen((o) => !o)}
+                                className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                            >
+                                <FiMoreHorizontal size={16} />
+                            </button>
+                            {menuOpen && (
+                                <div style={{
+                                    position: "absolute", top: "110%", right: 0,
+                                    zIndex: 9999, minWidth: 168,
+                                    background: "var(--popover)", border: "1px solid var(--border)",
+                                    borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+                                    padding: "4px 0",
+                                }}>
+                                    <button onClick={() => { handleSum(); setMenuOpen(false); }}
+                                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-foreground hover:bg-muted transition-colors"
+                                    >
+                                        <span className="text-muted-foreground"><FiHash size={13} /></span>Sum Numbers
+                                    </button>
+                                    <div style={{ height: 1, background: "var(--border)", margin: "3px 0" }} />
+                                    <button onClick={() => { handleCopy(); setMenuOpen(false); }}
+                                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-foreground hover:bg-muted transition-colors"
+                                    >
+                                        <span className="text-muted-foreground"><FiCopy size={13} /></span>Copy Note
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                        {/* Close button inside flex — no overlap */}
+                        <button
+                            onClick={onClose}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg bg-muted text-foreground hover:bg-destructive/20 hover:text-destructive transition-colors"
+                        >
+                            <FiX size={18} />
+                        </button>
                     </span>
                 </div>
+
+                {/* Sum result banner */}
+                {sumResult && (
+                    <div className="flex items-center justify-between gap-3 px-5 py-2.5 border-b border-primary/30 bg-primary/10">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs text-muted-foreground shrink-0">
+                                {sumResult.nums.length} numbers:
+                            </span>
+                            <div className="flex flex-wrap gap-1">
+                                {sumResult.nums.map((n, i) => (
+                                    <span key={i} className="text-xs px-1.5 py-0.5 rounded bg-primary/20 text-primary font-mono">{n % 1 === 0 ? n : n}</span>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-sm font-bold text-primary">= {sumResult.total % 1 === 0 ? sumResult.total : sumResult.total.toFixed(2)}</span>
+                            <button onClick={() => setSumResult(null)} className="text-muted-foreground hover:text-foreground"><FiX size={13} /></button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Internal search bar */}
                 <div className="flex items-center gap-2 px-5 py-2 border-b border-border/50 bg-card/40">
@@ -280,8 +352,9 @@ export default function NoteViewer({ note, folderId, onSave, onClose }) {
                             margin: 0,
                             border: "none",
                             zIndex: 0,
+                            display: inSearch ? "block" : "none",
                         }}
-                        dangerouslySetInnerHTML={{ __html: highlightedHtml || "<span style='color:var(--muted-foreground)'>Write your credentials here...\n\nExample:\nInstagram: john@gmail.com\nPassword: abc123</span>" }}
+                        dangerouslySetInnerHTML={{ __html: highlightedHtml }}
                     />
                     {/* Textarea — transparent text, visible caret */}
                     <textarea
@@ -305,10 +378,43 @@ export default function NoteViewer({ note, folderId, onSave, onClose }) {
                             outline: "none",
                             zIndex: 1,
                             overflowY: "auto",
+                            willChange: "scroll-position",
                         }}
+                        placeholder="Write your credentials here..."
                         spellCheck={false}
                     />
                 </div>
+
+                {/* Inline full-size image previews */}
+                {noteCreated && images.length > 0 && (
+                    <div className="border-t border-border/40 overflow-y-auto flex flex-col gap-3 px-5 py-4" style={{ maxHeight: "45vh" }}>
+                        {images.map((img) =>
+                            imgUrls[img.id] ? (
+                                <a key={img.id} href={imgUrls[img.id]} target="_blank" rel="noopener noreferrer" className="block">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                        src={imgUrls[img.id]}
+                                        alt={img.name}
+                                        style={{
+                                            maxWidth: "100%",
+                                            maxHeight: "40vh",
+                                            width: "auto",
+                                            height: "auto",
+                                            objectFit: "contain",
+                                            borderRadius: "0.5rem",
+                                            border: "1px solid var(--border)",
+                                            display: "block",
+                                        }}
+                                    />
+                                </a>
+                            ) : (
+                                <div key={img.id} className="h-24 bg-muted rounded-lg border border-border flex items-center justify-center">
+                                    <FiLoader size={16} className="animate-spin text-muted-foreground/60" />
+                                </div>
+                            )
+                        )}
+                    </div>
+                )}
 
                 {/* Images row */}
                 {noteCreated && (

@@ -11,7 +11,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { FiSearch, FiPlus, FiFileText, FiTrash2, FiLoader } from "react-icons/fi";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 export default function Home() {
   const [folders, setFolders] = useState([]);
@@ -66,7 +66,7 @@ export default function Home() {
     loadNotes();
     if (activeNote?.id === deleteTarget.id) { setViewerOpen(false); setActiveNote(null); }
     setDeleteTarget(null);
-    toast.success("Note deleted");
+    notify("Note deleted");
   };
 
   const getFolderName = (folderId) => folders.find((f) => f.id === folderId)?.name || "";
@@ -189,16 +189,19 @@ function NoteCard({ note, folderName, searchQuery, onClick, onDelete }) {
   const snippet = (note.content || "").slice(0, 120) + ((note.content || "").length > 120 ? "..." : "");
   return (
     <div onClick={onClick} className="group bg-card border border-border rounded-xl p-4 cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-all">
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <h3 className="font-medium text-foreground text-sm leading-snug flex-1 line-clamp-2">{highlight(note.title, searchQuery)}</h3>
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-          <button onClick={onDelete} className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-muted"><FiTrash2 size={14} /></button>
-        </div>
-      </div>
+      <h3 className="font-medium text-foreground text-sm leading-snug mb-2 line-clamp-2">{highlight(note.title, searchQuery)}</h3>
       <p className="text-xs text-muted-foreground font-mono leading-relaxed line-clamp-3 whitespace-pre-wrap">{highlight(snippet, searchQuery)}</p>
       <div className="mt-3 flex items-center justify-between">
-        {folderName && <Badge variant="secondary" className="text-xs bg-muted text-muted-foreground border-border">{folderName}</Badge>}
-        {note.images?.length > 0 && <span className="text-xs text-muted-foreground/50">{note.images.length} img</span>}
+        <div className="flex items-center gap-2">
+          {folderName && <Badge variant="secondary" className="text-xs bg-muted text-muted-foreground border-border">{folderName}</Badge>}
+          {note.images?.length > 0 && <span className="text-xs text-muted-foreground/50">{note.images.length} img</span>}
+        </div>
+        <button
+          onClick={onDelete}
+          className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground/50 hover:text-destructive hover:bg-muted transition-colors"
+        >
+          <FiTrash2 size={13} />
+        </button>
       </div>
     </div>
   );

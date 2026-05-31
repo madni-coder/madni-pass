@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { createNote, updateNoteData } from "@/lib/storage";
 import { saveImage, removeImage, loadImageUrl } from "@/lib/imageStore";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { Save, X, ImagePlus, Loader2 } from "lucide-react";
 
 export default function NoteEditor({ note, folderId, onSave, onClose }) {
@@ -30,21 +30,21 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
     }, []);
 
     const handleSave = async () => {
-        if (!title.trim()) { toast.error("Note ka title dalo"); return; }
-        if (!folderId && isNew) { toast.error("Pehle ek folder select karo"); return; }
+        if (!title.trim()) { notify("Note ka title dalo", "error"); return; }
+        if (!folderId && isNew) { notify("Pehle ek folder select karo", "error"); return; }
         setSaving(true);
         try {
             if (isNew) {
                 const saved = createNote(folderId, title.trim(), content);
                 onSave({ ...saved });
-                toast.success("Note save ho gaya!");
+                notify("Note save ho gaya!");
             } else {
                 updateNoteData(note.id, title.trim(), content, images);
                 onSave({ ...note, title: title.trim(), content, images });
-                toast.success("Note update ho gaya!");
+                notify("Note update ho gaya!");
             }
         } catch (err) {
-            toast.error("Failed to save: " + err.message);
+            notify("Failed to save: " + err.message, "error");
         } finally {
             setSaving(false);
         }
@@ -53,8 +53,8 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
     const handleImageUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        if (file.size > 100 * 1024 * 1024) { toast.error("Image 100MB se badi nahi honi chahiye"); return; }
-        if (isNew) { toast.error("Pehle note save karo, phir image daalo"); return; }
+        if (file.size > 100 * 1024 * 1024) { notify("Image 100MB se badi nahi honi chahiye", "error"); return; }
+        if (isNew) { notify("Pehle note save karo, phir image daalo", "error"); return; }
         setUploading(true);
         try {
             const id = Date.now().toString(36) + Math.random().toString(36).slice(2);
@@ -65,9 +65,9 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
             setImages(newImages);
             setImgUrls((prev) => ({ ...prev, [id]: url }));
             updateNoteData(note.id, title, content, newImages);
-            toast.success("Image add ho gayi!");
+            notify("Image add ho gayi!");
         } catch {
-            toast.error("Image upload nahi hui");
+            notify("Image upload nahi hui", "error");
         } finally {
             setUploading(false);
             e.target.value = "";
@@ -80,9 +80,9 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
             const newImages = images.filter((_, i) => i !== idx);
             setImages(newImages);
             updateNoteData(note.id, title, content, newImages);
-            toast.success("Image delete ho gayi");
+            notify("Image delete ho gayi!");
         } catch {
-            toast.error("Image delete nahi hui");
+            notify("Image delete nahi hui", "error");
         }
     };
 

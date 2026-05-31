@@ -14,7 +14,7 @@ import {
 import { FiFolder, FiPlus, FiMoreHorizontal, FiEdit2, FiTrash2, FiLock, FiMenu, FiX } from "react-icons/fi";
 import { BiFolderOpen } from "react-icons/bi";
 import { createFolder, updateFolderName, removeFolder } from "@/lib/storage";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 export default function Sidebar({ folders, setFolders, selectedFolder, onSelectFolder }) {
     const [newFolderName, setNewFolderName] = useState("");
@@ -30,7 +30,7 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
         setFolders((prev) => [...prev, folder]);
         setNewFolderName("");
         setShowNewFolder(false);
-        toast.success("Folder created!");
+        notify("Folder created!");
     };
 
     const handleRename = () => {
@@ -40,7 +40,7 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
             prev.map((f) => (f.id === renameTarget.id ? { ...f, name: renameName.trim() } : f))
         );
         setRenameTarget(null);
-        toast.success("Folder renamed");
+        notify("Folder renamed");
     };
 
     const handleDelete = () => {
@@ -48,7 +48,7 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
         setFolders((prev) => prev.filter((f) => f.id !== deleteTarget.id));
         if (selectedFolder?.id === deleteTarget.id) onSelectFolder(null);
         setDeleteTarget(null);
-        toast.success("Folder deleted");
+        notify("Folder deleted");
     };
 
     const SidebarContent = () => (
@@ -58,7 +58,7 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                     <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
                         <FiLock size={16} className="text-primary-foreground" />
                     </div>
-                    <span className="font-bold text-foreground text-lg">MadniPass</span>
+                    <span className="font-bold text-foreground text-lg">Madni Notes</span>
                 </div>
             </div>
 
@@ -102,14 +102,11 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                             <span className="truncate">{folder.name}</span>
                         </button>
                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <button
-                                    className={`w-5 h-5 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 transition-opacity ${selectedFolder?.id === folder.id ? "opacity-100" : ""
-                                        } hover:bg-white/10`}
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    <FiMoreHorizontal size={14} />
-                                </button>
+                            <DropdownMenuTrigger
+                                className={`w-5 h-5 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 transition-opacity ${selectedFolder?.id === folder.id ? "opacity-100" : ""} hover:bg-white/10`}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <FiMoreHorizontal size={14} />
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="bg-card border-border">
                                 <DropdownMenuItem
