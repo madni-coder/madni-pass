@@ -13,10 +13,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { FiFolder, FiPlus, FiMoreHorizontal, FiEdit2, FiTrash2, FiLock, FiMenu, FiX } from "react-icons/fi";
 import { BiFolderOpen } from "react-icons/bi";
-import { createFolder, updateFolderName, removeFolder } from "@/lib/storage";
+import { createFolder, updateFolder, deleteFolder } from "@/lib/db";
 import { notify } from "@/lib/notify";
 
-export default function Sidebar({ folders, setFolders, selectedFolder, onSelectFolder }) {
+export default function Sidebar({ folders, setFolders, selectedFolder, onSelectFolder, userId }) {
     const [newFolderName, setNewFolderName] = useState("");
     const [showNewFolder, setShowNewFolder] = useState(false);
     const [renameTarget, setRenameTarget] = useState(null);
@@ -24,18 +24,19 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [mobileOpen, setMobileOpen] = useState(false);
 
-    const handleCreate = () => {
+    const handleCreate = async () => {
         if (!newFolderName.trim()) return;
-        const folder = createFolder(newFolderName.trim());
+        const id = await createFolder(userId, newFolderName.trim());
+        const folder = { id, name: newFolderName.trim(), createdAt: Date.now() };
         setFolders((prev) => [...prev, folder]);
         setNewFolderName("");
         setShowNewFolder(false);
         notify("Folder created!");
     };
 
-    const handleRename = () => {
+    const handleRename = async () => {
         if (!renameName.trim()) return;
-        updateFolderName(renameTarget.id, renameName.trim());
+        await updateFolder(renameTarget.id, renameName.trim());
         setFolders((prev) =>
             prev.map((f) => (f.id === renameTarget.id ? { ...f, name: renameName.trim() } : f))
         );
@@ -43,8 +44,8 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
         notify("Folder renamed");
     };
 
-    const handleDelete = () => {
-        removeFolder(deleteTarget.id);
+    const handleDelete = async () => {
+        await deleteFolder(deleteTarget.id);
         setFolders((prev) => prev.filter((f) => f.id !== deleteTarget.id));
         if (selectedFolder?.id === deleteTarget.id) onSelectFolder(null);
         setDeleteTarget(null);

@@ -1,8 +1,8 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
 import {
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
+    signInWithPopup,
+    GoogleAuthProvider,
     signOut,
     onAuthStateChanged,
 } from "firebase/auth";
@@ -13,37 +13,26 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    // masterPassword is kept only in memory — never stored anywhere
-    const [masterPassword, setMasterPassword] = useState(null);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (u) => {
             setUser(u);
             setLoading(false);
-            if (!u) setMasterPassword(null);
         });
         return unsubscribe;
     }, []);
 
-    const signUp = async (email, password, master) => {
-        const cred = await createUserWithEmailAndPassword(auth, email, password);
-        setMasterPassword(master);
-        return cred;
-    };
-
-    const signIn = async (email, password, master) => {
-        const cred = await signInWithEmailAndPassword(auth, email, password);
-        setMasterPassword(master);
-        return cred;
+    const signInWithGoogle = async () => {
+        const provider = new GoogleAuthProvider();
+        return signInWithPopup(auth, provider);
     };
 
     const logOut = async () => {
-        setMasterPassword(null);
         await signOut(auth);
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, masterPassword, signUp, signIn, logOut }}>
+        <AuthContext.Provider value={{ user, loading, signInWithGoogle, logOut }}>
             {children}
         </AuthContext.Provider>
     );

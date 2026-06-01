@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { getFolders, getAllNotes, getNotesByFolder, removeNote } from "@/lib/storage";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { getFolders, getAllNotes, getNotes, deleteNote } from "@/lib/db";
 import Sidebar from "@/components/Sidebar";
 import NoteViewer from "@/components/NoteViewer";
 import { Button } from "@/components/ui/button";
@@ -10,10 +12,13 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FiSearch, FiPlus, FiFileText, FiTrash2, FiLoader } from "react-icons/fi";
+import { FiSearch, FiPlus, FiFileText, FiTrash2, FiLoader, FiLogOut } from "react-icons/fi";
 import { notify } from "@/lib/notify";
 
 export default function Home() {
+  const { user, loading: authLoading, logOut } = useAuth();
+  const router = useRouter();
+
   const [folders, setFolders] = useState([]);
   const [notes, setNotes] = useState([]);
   const [selectedFolder, setSelectedFolder] = useState(null);
@@ -24,15 +29,26 @@ export default function Home() {
   const [activeNote, setActiveNote] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
+  // Auth guard
   useEffect(() => {
-    setFolders(getFolders());
-    setLoading(false);
-  }, []);
+    if (!authLoading && !user) router.replace("/auth");
+  }, [user, authLoading, router]);
 
-  const loadNotes = useCallback(() => {
-    const raw = selectedFolder ? getNotesByFolder(selectedFolder.id) : getAllNotes();
-    setNotes(raw);
-  }, [selectedFolder]);
+  // Load folders once user is known
+  useEffect(() => {
+    if (!user) return;
+    getFolders(user.uid).then(setFolders).catch(() => { }).finally(() => setLoading(false));
+  }, [user]);
+
+  const loadNotes = useCallback(async () => {
+    if (!user) return;
+    try {
+      const raw = selectedFolder
+        ? await getNotes(user.uid, selectedFolder.id)
+        : await getAllNotes(user.uid);
+      setNotes(raw);
+    } catch { /* ignore */ }
+  }, [user, selectedFolder]);
 
   useEffect(() => { loadNotes(); }, [loadNotes]);
 
@@ -57,21 +73,26 @@ export default function Home() {
   };
 
   const handleSaveNote = (savedNote) => {
-    loadNotes();
+    // Update local state only — no extra Firestore read on every auto-save
+    setNotes(prev => {
+      const exists = prev.find(n => n.id === savedNote.id);
+      if (exists) return prev.map(n => n.id === savedNote.id ? { ...n, ...savedNote } : n);
+      return [savedNote, ...prev];
+    });
     setActiveNote(savedNote);
   };
 
-  const handleDeleteNote = () => {
-    removeNote(deleteTarget.id);
+  const handleDeleteNote = async () => {
+    await deleteNote(deleteTarget.id);
     loadNotes();
-    if (activeNote?.id === deleteTarget.id) { setViewerOpen(false); setActiveNote(null); }
+    if (activeNote?.id === deleteTarget.id) { setNotepadOpen(false); setActiveNote(null); }
     setDeleteTarget(null);
     notify("Note deleted");
   };
 
   const getFolderName = (folderId) => folders.find((f) => f.id === folderId)?.name || "";
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <FiLoader size={32} className="animate-spin text-primary" />
@@ -79,10 +100,13 @@ export default function Home() {
     );
   }
 
+  if (!user) return null;
+
   return (
     <>
       <div className="flex h-screen overflow-hidden bg-background">
         <Sidebar folders={folders} setFolders={setFolders} selectedFolder={selectedFolder}
+          userId={user.uid}
           onSelectFolder={(folder) => { setSelectedFolder(folder); setSearchQuery(""); }} />
 
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -106,6 +130,9 @@ export default function Home() {
               <span className="hidden sm:inline">{selectedFolder ? `Add Note` : "New Note"}</span>
               <span className="sm:hidden">New</span>
             </Button>
+            <button onClick={async () => { await logOut(); router.replace("/auth"); }} className="w-9 h-9 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0" title="Sign out">
+              <FiLogOut size={16} />
+            </button>
           </div>
 
           {/* Notes area */}
@@ -167,6 +194,7 @@ export default function Home() {
         <NoteViewer
           note={activeNote}
           folderId={activeNote?.folderId ?? newNoteFolderId}
+          userId={user.uid}
           onSave={handleSaveNote}
           onClose={() => { setNotepadOpen(false); loadNotes(); }}
         />

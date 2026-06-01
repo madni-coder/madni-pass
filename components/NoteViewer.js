@@ -1,7 +1,6 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { createNote, updateNoteData } from "@/lib/storage";
-import { saveImage, removeImage, loadImageUrl } from "@/lib/imageStore";
+import { createNote, updateNote, uploadImage, deleteImage } from "@/lib/db";
 import { notify } from "@/lib/notify";
 import { FiSearch, FiX, FiChevronUp, FiChevronDown, FiImage, FiLoader, FiCheck, FiMoreHorizontal, FiHash, FiCopy } from "react-icons/fi";
 
@@ -38,12 +37,11 @@ function buildHighlightHtml(text, query, matches, activeIdx) {
     return result;
 }
 
-export default function NoteViewer({ note, folderId, onSave, onClose }) {
+export default function NoteViewer({ note, folderId, onSave, onClose, userId }) {
     const isNew = !note?.id;
     const [title, setTitle] = useState(note?.title || "");
     const [content, setContent] = useState(note?.content || "");
     const [images, setImages] = useState(note?.images || []);
-    const [imgUrls, setImgUrls] = useState({});
     const [uploading, setUploading] = useState(false);
     const [saveStatus, setSaveStatus] = useState("idle"); // "idle" | "saved"
     const [noteCreated, setNoteCreated] = useState(!!note?.id); // for showing images row
@@ -69,13 +67,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose }) {
     const imagesRef = useRef(images);
     useEffect(() => { imagesRef.current = images; }, [images]);
 
-    useEffect(() => {
-        if (!note?.images?.length) return;
-        note.images.forEach(async (img) => {
-            const url = await loadImageUrl(img.id);
-            if (url) setImgUrls((p) => ({ ...p, [img.id]: url }));
-        });
-    }, [note]);
+    // No IndexedDB loading needed — Firebase Storage URLs are stored directly in images array
 
     const matches = findMatches(content, inSearch);
 
@@ -111,15 +103,15 @@ export default function NoteViewer({ note, folderId, onSave, onClose }) {
     useEffect(() => {
         if (!title.trim()) return;
         clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = setTimeout(() => {
+        saveTimerRef.current = setTimeout(async () => {
             try {
                 if (!noteIdRef.current) {
-                    const saved = createNote(folderId ?? null, title.trim(), content);
-                    noteIdRef.current = saved.id;
+                    const id = await createNote(userId, folderId ?? null, title.trim(), content);
+                    noteIdRef.current = id;
                     setNoteCreated(true);
-                    onSave({ ...saved });
+                    onSave({ id, title: title.trim(), content, images: [] });
                 } else {
-                    updateNoteData(noteIdRef.current, title.trim(), content, imagesRef.current);
+                    await updateNote(noteIdRef.current, title.trim(), content, imagesRef.current);
                     onSave({ id: noteIdRef.current, title: title.trim(), content, images: imagesRef.current });
                 }
                 setSaveStatus("saved");
@@ -139,23 +131,20 @@ export default function NoteViewer({ note, folderId, onSave, onClose }) {
         if (!noteIdRef.current) { notify("Pehle note ka title likho, phir image daalo", "error"); return; }
         setUploading(true);
         try {
-            const id = Date.now().toString(36) + Math.random().toString(36).slice(2);
-            await saveImage(id, file);
-            const url = URL.createObjectURL(file);
-            const newImgs = [...imagesRef.current, { id, name: file.name }];
+            const { url, path } = await uploadImage(userId, noteIdRef.current, file);
+            const newImgs = [...imagesRef.current, { url, path, name: file.name }];
             setImages(newImgs);
-            setImgUrls((p) => ({ ...p, [id]: url }));
-            updateNoteData(noteIdRef.current, title, content, newImgs);
+            await updateNote(noteIdRef.current, title, content, newImgs);
             notify("Image attached!");
         } catch { notify("Failed to upload image", "error"); }
         finally { setUploading(false); e.target.value = ""; }
     };
 
     const handleDeleteImage = async (img, idx) => {
-        await removeImage(img.id).catch(() => { });
+        if (img.path) await deleteImage(img.path).catch(() => { });
         const newImgs = images.filter((_, i) => i !== idx);
         setImages(newImgs);
-        if (noteIdRef.current) updateNoteData(noteIdRef.current, title, content, newImgs);
+        if (noteIdRef.current) await updateNote(noteIdRef.current, title, content, newImgs);
         notify("Image removed");
     };
 
@@ -388,12 +377,12 @@ export default function NoteViewer({ note, folderId, onSave, onClose }) {
                 {/* Inline full-size image previews */}
                 {noteCreated && images.length > 0 && (
                     <div className="border-t border-border/40 overflow-y-auto flex flex-col gap-3 px-5 py-4" style={{ maxHeight: "45vh" }}>
-                        {images.map((img) =>
-                            imgUrls[img.id] ? (
-                                <a key={img.id} href={imgUrls[img.id]} target="_blank" rel="noopener noreferrer" className="block">
+                        {images.map((img, idx) =>
+                            img.url ? (
+                                <a key={idx} href={img.url} target="_blank" rel="noopener noreferrer" className="block">
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img
-                                        src={imgUrls[img.id]}
+                                        src={img.url}
                                         alt={img.name}
                                         style={{
                                             maxWidth: "100%",
@@ -407,11 +396,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose }) {
                                         }}
                                     />
                                 </a>
-                            ) : (
-                                <div key={img.id} className="h-24 bg-muted rounded-lg border border-border flex items-center justify-center">
-                                    <FiLoader size={16} className="animate-spin text-muted-foreground/60" />
-                                </div>
-                            )
+                            ) : null
                         )}
                     </div>
                 )}
@@ -420,11 +405,11 @@ export default function NoteViewer({ note, folderId, onSave, onClose }) {
                 {noteCreated && (
                     <div className="border-t border-border px-5 py-3 flex items-center gap-2 flex-wrap">
                         {images.map((img, idx) => (
-                            <div key={img.id} className="relative group shrink-0">
-                                {imgUrls[img.id] ? (
-                                    <a href={imgUrls[img.id]} target="_blank" rel="noopener noreferrer">
+                            <div key={idx} className="relative group shrink-0">
+                                {img.url ? (
+                                    <a href={img.url} target="_blank" rel="noopener noreferrer">
                                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img src={imgUrls[img.id]} alt={img.name} className="w-14 h-14 object-cover rounded-lg border border-border hover:border-primary transition-colors" />
+                                        <img src={img.url} alt={img.name} className="w-14 h-14 object-cover rounded-lg border border-border hover:border-primary transition-colors" />
                                     </a>
                                 ) : (
                                     <div className="w-14 h-14 bg-muted rounded-lg border border-border flex items-center justify-center">
