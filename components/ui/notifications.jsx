@@ -17,15 +17,15 @@ export default function Notifications() {
     if (items.length === 0) return null;
 
     return (
-        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center gap-2 pointer-events-none">
+        <div className="fixed bottom-5 left-1/2 z-9999 flex -translate-x-1/2 flex-col items-center gap-2 pointer-events-none">
             {items.map((n) => (
                 <div
                     key={n.id}
                     className="px-4 py-2 rounded-full text-sm font-medium shadow-lg animate-in fade-in slide-in-from-bottom-3 duration-200"
                     style={{
-                        background: n.type === "error" ? "rgba(220,38,38,0.92)" : "rgba(30,30,30,0.92)",
-                        color: n.type === "error" ? "#fff" : "#5AF5FA",
-                        border: `1px solid ${n.type === "error" ? "rgba(220,38,38,0.4)" : "rgba(90,245,250,0.25)"}`,
+                        background: n.type === "error" ? "color-mix(in srgb, var(--destructive) 88%, black)" : "color-mix(in srgb, var(--card) 82%, black)",
+                        color: n.type === "error" ? "var(--destructive-foreground)" : "var(--primary)",
+                        border: `1px solid ${n.type === "error" ? "color-mix(in srgb, var(--destructive) 55%, transparent)" : "color-mix(in srgb, var(--primary) 28%, transparent)"}`,
                         backdropFilter: "blur(8px)",
                         WebkitBackdropFilter: "blur(8px)",
                     }}

@@ -79,6 +79,13 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
     const creatingRef = useRef(false);
     useEffect(() => { imagesRef.current = images; }, [images]);
 
+    // Close on Esc key
+    useEffect(() => {
+        const handler = (e) => { if (e.key === "Escape") onClose(); };
+        document.addEventListener("keydown", handler);
+        return () => document.removeEventListener("keydown", handler);
+    }, [onClose]);
+
     // No IndexedDB loading needed — Firebase Storage URLs are stored directly in images array
 
     const matches = findMatches(content, inSearch);

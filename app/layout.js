@@ -1,10 +1,12 @@
-import { Inter } from "next/font/google";
+import { Bitter, Fira_Code, Manrope } from "next/font/google";
 import "./globals.css";
 import Notifications from "@/components/ui/notifications";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "next-themes";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+const manrope = Manrope({ subsets: ["latin"], variable: "--font-sans" });
+const bitter = Bitter({ subsets: ["latin"], variable: "--font-serif" });
+const firaCode = Fira_Code({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata = {
   title: "Madni Notes",
@@ -14,7 +16,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} bg-background text-foreground antialiased`} style={{ fontFamily: "var(--font-sans, sans-serif)" }}>
+      <body className={`${manrope.variable} ${bitter.variable} ${firaCode.variable} bg-background text-foreground antialiased`} style={{ fontFamily: "var(--font-sans, sans-serif)" }}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <AuthProvider>
             {children}

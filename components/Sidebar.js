@@ -11,8 +11,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FiFolder, FiPlus, FiMoreHorizontal, FiEdit2, FiTrash2, FiLock, FiMenu, FiX, FiLogOut, FiSun, FiMoon } from "react-icons/fi";
+import { FiFolder, FiPlus, FiMoreHorizontal, FiEdit2, FiTrash2, FiLock, FiMenu, FiX, FiSun, FiMoon } from "react-icons/fi";
 import { BiFolderOpen } from "react-icons/bi";
+import { FaPowerOff } from "react-icons/fa";
 import { createFolder, updateFolder, deleteFolder } from "@/lib/db";
 import { notify } from "@/lib/notify";
 import { useTheme } from "next-themes";
@@ -25,6 +26,7 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
     const [renameName, setRenameName] = useState("");
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [logoutConfirm, setLogoutConfirm] = useState(false);
 
     const handleCreate = async () => {
         if (!newFolderName.trim()) return;
@@ -169,11 +171,12 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                     {(theme ?? "dark") === "dark" ? <FiSun size={16} /> : <FiMoon size={16} />}
                 </button>
                 <button
-                    onClick={onLogout}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    onClick={() => setLogoutConfirm(true)}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors text-xs font-medium"
                     title="Sign out"
                 >
-                    <FiLogOut size={16} />
+                    <FaPowerOff size={13} />
+                    <span>Logout</span>
                 </button>
             </div>
         </div>
@@ -220,6 +223,23 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <AlertDialog open={logoutConfirm} onOpenChange={setLogoutConfirm}>
+                <AlertDialogContent className="bg-card border-border text-foreground">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Logout?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-muted-foreground">
+                            Kya aap sach mein logout karna chahte hain?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="bg-muted border-border text-muted-foreground hover:bg-muted/80">No</AlertDialogCancel>
+                        <AlertDialogAction onClick={onLogout} className="bg-destructive hover:bg-destructive/90 flex items-center gap-1.5">
+                            <FaPowerOff size={12} /> Yes, Logout
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
                 <AlertDialogContent className="bg-card border-border text-foreground">
