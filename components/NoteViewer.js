@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createNote, updateNote, uploadImage, deleteImage } from "@/lib/db";
 import { notify } from "@/lib/notify";
-import { FiSearch, FiX, FiChevronUp, FiChevronDown, FiImage, FiLoader, FiCheck, FiMoreHorizontal, FiHash, FiCopy } from "react-icons/fi";
+import { FiSearch, FiX, FiChevronUp, FiChevronDown, FiImage, FiLoader, FiCheck, FiMoreHorizontal, FiHash, FiCopy, FiWifiOff } from "react-icons/fi";
 
 function escHtml(str) {
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -50,6 +50,18 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
     const [sumResult, setSumResult] = useState(null);
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef(null);
+    const [isOnline, setIsOnline] = useState(typeof window !== "undefined" ? navigator.onLine : true);
+
+    useEffect(() => {
+        const goOnline = () => setIsOnline(true);
+        const goOffline = () => setIsOnline(false);
+        window.addEventListener("online", goOnline);
+        window.addEventListener("offline", goOffline);
+        return () => {
+            window.removeEventListener("online", goOnline);
+            window.removeEventListener("offline", goOffline);
+        };
+    }, []);
 
     useEffect(() => {
         if (!menuOpen) return;
@@ -57,14 +69,14 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
         document.addEventListener("mousedown", handler);
         return () => document.removeEventListener("mousedown", handler);
     }, [menuOpen]);
-
-    const taRef = useRef(null);
-    const bdRef = useRef(null);
-    const srRef = useRef(null);
-    const fileRef = useRef(null);
-    const saveTimerRef = useRef(null);
     const noteIdRef = useRef(note?.id || null);
     const imagesRef = useRef(images);
+    const srRef = useRef(null);
+    const bdRef = useRef(null);
+    const taRef = useRef(null);
+    const fileRef = useRef(null);
+    const saveTimerRef = useRef(null);
+    const creatingRef = useRef(false);
     useEffect(() => { imagesRef.current = images; }, [images]);
 
     // No IndexedDB loading needed — Firebase Storage URLs are stored directly in images array
@@ -106,10 +118,16 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
         saveTimerRef.current = setTimeout(async () => {
             try {
                 if (!noteIdRef.current) {
-                    const id = await createNote(userId, folderId ?? null, title.trim(), content);
-                    noteIdRef.current = id;
-                    setNoteCreated(true);
-                    onSave({ id, title: title.trim(), content, images: [] });
+                    if (creatingRef.current) return; // prevent duplicate creation if previous create is still pending
+                    creatingRef.current = true;
+                    try {
+                        const id = await createNote(userId, folderId ?? null, title.trim(), content);
+                        noteIdRef.current = id;
+                        setNoteCreated(true);
+                        onSave({ id, title: title.trim(), content, images: [] });
+                    } finally {
+                        creatingRef.current = false;
+                    }
                 } else {
                     await updateNote(noteIdRef.current, title.trim(), content, imagesRef.current);
                     onSave({ id: noteIdRef.current, title: title.trim(), content, images: imagesRef.current });
@@ -227,8 +245,9 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
                     />
                     {/* Auto-save status + three-dots menu */}
                     <span className="shrink-0 flex items-center gap-2 text-xs">
-                        {saveStatus === "saving" && <><FiLoader size={12} className="animate-spin text-muted-foreground" /><span className="text-muted-foreground">Saving...</span></>}
-                        {saveStatus === "saved" && <><FiCheck size={12} className="text-green-500" /><span className="text-green-500">Saved</span></>}
+                        {!isOnline && <><FiWifiOff size={12} className="text-yellow-400" /><span className="text-yellow-400">Offline</span></>}
+                        {isOnline && saveStatus === "saving" && <><FiLoader size={12} className="animate-spin text-muted-foreground" /><span className="text-muted-foreground">Saving...</span></>}
+                        {isOnline && saveStatus === "saved" && <><FiCheck size={12} className="text-green-500" /><span className="text-green-500">Saved</span></>}
                         {/* Custom inline menu — avoids z-index portal issues */}
                         <div ref={menuRef} style={{ position: "relative" }}>
                             <button

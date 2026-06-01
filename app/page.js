@@ -12,7 +12,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FiSearch, FiPlus, FiFileText, FiTrash2, FiLoader, FiLogOut } from "react-icons/fi";
+import { FiSearch, FiPlus, FiFileText, FiTrash2, FiLoader } from "react-icons/fi";
 import { notify } from "@/lib/notify";
 
 export default function Home() {
@@ -107,6 +107,7 @@ export default function Home() {
       <div className="flex h-screen overflow-hidden bg-background">
         <Sidebar folders={folders} setFolders={setFolders} selectedFolder={selectedFolder}
           userId={user.uid}
+          onLogout={async () => { await logOut(); router.replace("/auth"); }}
           onSelectFolder={(folder) => { setSelectedFolder(folder); setSearchQuery(""); }} />
 
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -116,7 +117,7 @@ export default function Home() {
             <div className="relative flex-1 max-w-xl">
               <FiSearch size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder='Search notes... e.g. "instagram" or "gmail"'
+                placeholder='Search Anything'
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 bg-muted border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"
@@ -130,9 +131,6 @@ export default function Home() {
               <span className="hidden sm:inline">{selectedFolder ? `Add Note` : "New Note"}</span>
               <span className="sm:hidden">New</span>
             </Button>
-            <button onClick={async () => { await logOut(); router.replace("/auth"); }} className="w-9 h-9 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0" title="Sign out">
-              <FiLogOut size={16} />
-            </button>
           </div>
 
           {/* Notes area */}
@@ -203,6 +201,16 @@ export default function Home() {
   );
 }
 
+function formatDate(ts) {
+  if (!ts) return "";
+  const d = ts?.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
+  if (isNaN(d.getTime())) return "";
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = String(d.getFullYear()).slice(2);
+  return `${day}/${month}/${year}`;
+}
+
 function highlight(text, query) {
   if (!query || !text) return text;
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -214,21 +222,30 @@ function highlight(text, query) {
 }
 
 function NoteCard({ note, folderName, searchQuery, onClick, onDelete }) {
-  const snippet = (note.content || "").slice(0, 120) + ((note.content || "").length > 120 ? "..." : "");
+  const snippet = (note.content || "").slice(0, 110) + ((note.content || "").length > 110 ? "..." : "");
+  const date = formatDate(note.updatedAt || note.createdAt);
   return (
-    <div onClick={onClick} className="group bg-card border border-border rounded-xl p-4 cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-all">
-      <h3 className="font-medium text-foreground text-sm leading-snug mb-2 line-clamp-2">{highlight(note.title, searchQuery)}</h3>
-      <p className="text-xs text-muted-foreground font-mono leading-relaxed line-clamp-3 whitespace-pre-wrap">{highlight(snippet, searchQuery)}</p>
-      <div className="mt-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {folderName && <Badge variant="secondary" className="text-xs bg-muted text-muted-foreground border-border">{folderName}</Badge>}
-          {note.images?.length > 0 && <span className="text-xs text-muted-foreground/50">{note.images.length} img</span>}
+    <div onClick={onClick} className="group relative bg-card border border-border rounded-xl p-4 cursor-pointer hover:border-primary/50 hover:shadow-md hover:shadow-black/20 transition-all overflow-hidden flex flex-col gap-2">
+      {/* Accent bar on hover */}
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-linear-to-r from-primary to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+      {/* Title */}
+      <h3 className="font-semibold text-foreground text-sm leading-snug line-clamp-2 pr-1">{highlight(note.title, searchQuery)}</h3>
+      {/* Content preview */}
+      {snippet && (
+        <p className="text-xs text-muted-foreground/80 font-mono leading-relaxed line-clamp-3 whitespace-pre-wrap flex-1">{highlight(snippet, searchQuery)}</p>
+      )}
+      {/* Bottom row */}
+      <div className="flex items-center justify-between pt-2 border-t border-border/40 mt-auto">
+        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+          {date && <span className="text-[10px] text-muted-foreground/50 shrink-0">{date}</span>}
+          {folderName && <Badge variant="secondary" className="text-[10px] bg-muted/60 text-muted-foreground border-0 px-1.5 py-0 h-4">{folderName}</Badge>}
+          {note.images?.length > 0 && <span className="text-[10px] text-muted-foreground/40">📎{note.images.length}</span>}
         </div>
         <button
           onClick={onDelete}
-          className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground/50 hover:text-destructive hover:bg-muted transition-colors"
+          className="w-6 h-6 flex items-center justify-center rounded-md text-muted-foreground/30 hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
         >
-          <FiTrash2 size={13} />
+          <FiTrash2 size={12} />
         </button>
       </div>
     </div>

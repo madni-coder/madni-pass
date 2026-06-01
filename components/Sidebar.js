@@ -11,12 +11,14 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FiFolder, FiPlus, FiMoreHorizontal, FiEdit2, FiTrash2, FiLock, FiMenu, FiX } from "react-icons/fi";
+import { FiFolder, FiPlus, FiMoreHorizontal, FiEdit2, FiTrash2, FiLock, FiMenu, FiX, FiLogOut, FiSun, FiMoon } from "react-icons/fi";
 import { BiFolderOpen } from "react-icons/bi";
 import { createFolder, updateFolder, deleteFolder } from "@/lib/db";
 import { notify } from "@/lib/notify";
+import { useTheme } from "next-themes";
 
-export default function Sidebar({ folders, setFolders, selectedFolder, onSelectFolder, userId }) {
+export default function Sidebar({ folders, setFolders, selectedFolder, onSelectFolder, userId, onLogout }) {
+    const { theme, setTheme } = useTheme();
     const [newFolderName, setNewFolderName] = useState("");
     const [showNewFolder, setShowNewFolder] = useState(false);
     const [renameTarget, setRenameTarget] = useState(null);
@@ -127,38 +129,53 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                     </div>
                 ))}
 
-                {folders.length === 0 && (
+                {showNewFolder && (
+                    <div className="px-1 pt-1 pb-2">
+                        <Input
+                            autoFocus
+                            placeholder="Folder name..."
+                            value={newFolderName}
+                            onChange={(e) => setNewFolderName(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") handleCreate();
+                                if (e.key === "Escape") setShowNewFolder(false);
+                            }}
+                            className="bg-muted border-border text-foreground placeholder:text-muted-foreground text-sm mb-2"
+                        />
+                        <div className="flex gap-2">
+                            <Button size="sm" onClick={handleCreate} className="flex-1 bg-primary hover:bg-primary/90 text-xs">
+                                Create
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => setShowNewFolder(false)} className="text-muted-foreground text-xs">
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
+                {folders.length === 0 && !showNewFolder && (
                     <p className="text-xs text-muted-foreground/60 text-center py-6">
                         No folders yet.<br />Press + to create one
                     </p>
                 )}
             </ScrollArea>
 
-            {showNewFolder && (
-                <div className="px-3 py-3 border-t border-border">
-                    <Input
-                        autoFocus
-                        placeholder="Folder name..."
-                        value={newFolderName}
-                        onChange={(e) => setNewFolderName(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") handleCreate();
-                            if (e.key === "Escape") setShowNewFolder(false);
-                        }}
-                        className="bg-muted border-border text-foreground placeholder:text-muted-foreground text-sm mb-2"
-                    />
-                    <div className="flex gap-2">
-                        <Button size="sm" onClick={handleCreate} className="flex-1 bg-primary hover:bg-primary/90 text-xs">
-                            Create
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setShowNewFolder(false)} className="text-muted-foreground text-xs">
-                            Cancel
-                        </Button>
-                    </div>
-                </div>
-            )}
-
-
+            <div className="border-t border-border px-3 py-3 flex items-center justify-between shrink-0">
+                <button
+                    onClick={() => setTheme((theme ?? "dark") === "dark" ? "light" : "dark")}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    title={(theme ?? "dark") === "dark" ? "Light mode" : "Dark mode"}
+                >
+                    {(theme ?? "dark") === "dark" ? <FiSun size={16} /> : <FiMoon size={16} />}
+                </button>
+                <button
+                    onClick={onLogout}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    title="Sign out"
+                >
+                    <FiLogOut size={16} />
+                </button>
+            </div>
         </div>
     );
 
