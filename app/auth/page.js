@@ -16,6 +16,17 @@ export default function AuthPage() {
         if (!loading && user) router.replace("/");
     }, [user, loading, router]);
 
+    const getFriendlyError = (code) => {
+        switch (code) {
+            case "auth/popup-blocked": return "Browser ne popup block kar di. Please allow popups ya dobarah try karo.";
+            case "auth/popup-closed-by-user": return "Sign in cancel ho gayi. Dobara try karo.";
+            case "auth/network-request-failed": return "Internet connection check karo aur dobara try karo.";
+            case "auth/too-many-requests": return "Bahut zyada tries. Thodi der baad try karo.";
+            case "auth/user-disabled": return "Ye account disable ho gaya hai.";
+            default: return "Sign in fail hua. Dobara try karo.";
+        }
+    };
+
     const handleGoogle = async () => {
         setSigningIn(true);
         setError("");
@@ -23,7 +34,7 @@ export default function AuthPage() {
             await signInWithGoogle();
             router.replace("/");
         } catch (e) {
-            setError(e.message || "Sign in failed");
+            setError(getFriendlyError(e.code));
         } finally {
             setSigningIn(false);
         }
