@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getFolders, getAllNotes, getNotes, deleteNote } from "@/lib/db";
@@ -18,6 +18,7 @@ import { notify } from "@/lib/notify";
 export default function Home() {
   const { user, loading: authLoading, logOut } = useAuth();
   const router = useRouter();
+  const notesCacheRef = useRef(new Map());
 
   const [folders, setFolders] = useState([]);
   const [notes, setNotes] = useState([]);
@@ -29,6 +30,34 @@ export default function Home() {
   const [activeNote, setActiveNote] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
+  const getNotesCacheKey = useCallback(
+    (folder) => (folder?.id ? `folder:${folder.id}` : "all"),
+    []
+  );
+
+  const writeNotesCache = useCallback((folder, nextNotes) => {
+    notesCacheRef.current.set(getNotesCacheKey(folder), nextNotes);
+  }, [getNotesCacheKey]);
+
+  const upsertCachedNote = useCallback((savedNote) => {
+    for (const [key, cachedNotes] of notesCacheRef.current.entries()) {
+      const belongsToFolder = key === "all" || key === `folder:${savedNote.folderId}`;
+      if (!belongsToFolder) continue;
+
+      const exists = cachedNotes.some((note) => note.id === savedNote.id);
+      const nextNotes = exists
+        ? cachedNotes.map((note) => (note.id === savedNote.id ? { ...note, ...savedNote } : note))
+        : [savedNote, ...cachedNotes];
+      notesCacheRef.current.set(key, nextNotes);
+    }
+  }, []);
+
+  const removeCachedNote = useCallback((noteId) => {
+    for (const [key, cachedNotes] of notesCacheRef.current.entries()) {
+      notesCacheRef.current.set(key, cachedNotes.filter((note) => note.id !== noteId));
+    }
+  }, []);
+
   // Auth guard
   useEffect(() => {
     if (!authLoading && !user) router.replace("/auth");
@@ -37,18 +66,26 @@ export default function Home() {
   // Load folders once user is known
   useEffect(() => {
     if (!user) return;
+    notesCacheRef.current.clear();
     getFolders(user.uid).then(setFolders).catch(() => { }).finally(() => setLoading(false));
   }, [user]);
 
   const loadNotes = useCallback(async () => {
     if (!user) return;
+    const cacheKey = getNotesCacheKey(selectedFolder);
+    if (notesCacheRef.current.has(cacheKey)) {
+      setNotes(notesCacheRef.current.get(cacheKey));
+      return;
+    }
+
     try {
       const raw = selectedFolder
         ? await getNotes(user.uid, selectedFolder.id)
         : await getAllNotes(user.uid);
+      writeNotesCache(selectedFolder, raw);
       setNotes(raw);
     } catch { /* ignore */ }
-  }, [user, selectedFolder]);
+  }, [user, selectedFolder, getNotesCacheKey, writeNotesCache]);
 
   useEffect(() => { loadNotes(); }, [loadNotes]);
 
@@ -76,15 +113,22 @@ export default function Home() {
     // Update local state only — no extra Firestore read on every auto-save
     setNotes(prev => {
       const exists = prev.find(n => n.id === savedNote.id);
-      if (exists) return prev.map(n => n.id === savedNote.id ? { ...n, ...savedNote } : n);
-      return [savedNote, ...prev];
+      const nextNotes = exists ? prev.map(n => n.id === savedNote.id ? { ...n, ...savedNote } : n) : [savedNote, ...prev];
+      writeNotesCache(selectedFolder, nextNotes);
+      return nextNotes;
     });
+    upsertCachedNote(savedNote);
     setActiveNote(savedNote);
   };
 
   const handleDeleteNote = async () => {
     await deleteNote(deleteTarget.id);
-    loadNotes();
+    setNotes((prev) => {
+      const nextNotes = prev.filter((note) => note.id !== deleteTarget.id);
+      writeNotesCache(selectedFolder, nextNotes);
+      return nextNotes;
+    });
+    removeCachedNote(deleteTarget.id);
     if (activeNote?.id === deleteTarget.id) { setNotepadOpen(false); setActiveNote(null); }
     setDeleteTarget(null);
     notify("Note deleted");

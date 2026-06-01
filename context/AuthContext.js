@@ -5,12 +5,15 @@ import {
     signInWithRedirect,
     getRedirectResult,
     GoogleAuthProvider,
+    signInAnonymously,
     signOut,
     onAuthStateChanged,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 const AuthContext = createContext(null);
+const TEST_LOGIN_ID = "test";
+const TEST_LOGIN_PASSWORD = "123";
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
@@ -40,12 +43,22 @@ export function AuthProvider({ children }) {
         }
     };
 
+    const signInWithTestCredentials = async (loginId, password) => {
+        if (loginId.trim() !== TEST_LOGIN_ID || password !== TEST_LOGIN_PASSWORD) {
+            const err = new Error("Invalid test credentials");
+            err.code = "auth/invalid-test-credentials";
+            throw err;
+        }
+
+        return signInAnonymously(auth);
+    };
+
     const logOut = async () => {
         await signOut(auth);
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, signInWithGoogle, logOut }}>
+        <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithTestCredentials, logOut }}>
             {children}
         </AuthContext.Provider>
     );
