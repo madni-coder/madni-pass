@@ -20,6 +20,99 @@ function findMatches(text, query) {
     return out;
 }
 
+function parseCredentials(content) {
+    if (!content) return [];
+    const lines = content.split("\n");
+    const creds = [];
+    const regex = /^\s*(?:[\w\s\/]+?\s+)?(email|mail|gmail|username|user|login|id|password|pass|pswd|pin|key|token|link|website|url)\s*[:\-=\s]\s*(.+)$/i;
+    lines.forEach((lineText, index) => {
+        const m = regex.exec(lineText);
+        if (m && m[2].trim().length > 0) {
+            creds.push({
+                lineIndex: index,
+                key: m[1].toLowerCase(),
+                label: m[1],
+                value: m[2].trim()
+            });
+        }
+    });
+    return creds;
+}
+
+let canvas = null;
+function getTextWidth(text, font) {
+    if (typeof window === "undefined") return 0;
+    if (!canvas) {
+        canvas = document.createElement("canvas");
+    }
+    const context = canvas.getContext("2d");
+    context.font = font;
+    return context.measureText(text).width;
+}
+
+function copyToClipboard(text) {
+    if (typeof window === "undefined") return Promise.reject(new Error("No window context"));
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text);
+    } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        try {
+            const successful = document.execCommand("copy");
+            document.body.removeChild(textarea);
+            if (successful) {
+                return Promise.resolve();
+            } else {
+                return Promise.reject(new Error("execCommand copy failed"));
+            }
+        } catch (err) {
+            document.body.removeChild(textarea);
+            return Promise.reject(err);
+        }
+    }
+}
+
+function CredentialCopyButton({ value, label, top, left, lineHeight }) {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = (e) => {
+        e.stopPropagation();
+        copyToClipboard(value).then(() => {
+            setCopied(true);
+            notify(`${label} copied!`);
+            setTimeout(() => setCopied(false), 2000);
+        }).catch((err) => {
+            notify("Copy failed: " + err.message, "error");
+        });
+    };
+
+    return (
+        <button
+            onClick={handleCopy}
+            style={{
+                position: "absolute",
+                top: top + (lineHeight - 24) / 2,
+                left: `${left}px`,
+                pointerEvents: "auto",
+                zIndex: 10,
+            }}
+            className={`w-6 h-6 flex items-center justify-center rounded-md border transition-all duration-150 active:scale-95 shadow-sm ${
+                copied
+                    ? "bg-green-500/25 border-green-500 text-green-400 font-bold scale-105"
+                    : "bg-primary/10 border-primary/20 text-primary hover:bg-primary/25 hover:border-primary/40 hover:scale-105"
+            }`}
+            title={`Copy ${label}`}
+        >
+            {copied ? <FiCheck size={11} className="text-green-400" /> : <FiCopy size={11} />}
+        </button>
+    );
+}
+
 function buildHighlightHtml(text, query, matches, activeIdx) {
     if (!text) return "";
     if (!query || matches.length === 0) return escHtml(text);
@@ -65,6 +158,8 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
         localStorage.setItem("note_font_style", style);
     };
 
+    const [scrollTop, setScrollTop] = useState(0);
+
     useEffect(() => {
         const goOnline = () => setIsOnline(true);
         const goOffline = () => setIsOnline(false);
@@ -100,41 +195,23 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
     }, [onClose]);
 
     const matches = findMatches(content, inSearch);
+    const detectedCreds = useMemo(() => parseCredentials(content), [content]);
 
     const syncScroll = useCallback(() => {
         if (bdRef.current && taRef.current) {
             bdRef.current.scrollTop = taRef.current.scrollTop;
             bdRef.current.scrollLeft = taRef.current.scrollLeft;
         }
+        if (taRef.current) {
+            setScrollTop(taRef.current.scrollTop);
+        }
     }, []);
 
-    // Floating copy button state (shows next to a credential line on hover)
-    const [hoverCopy, setHoverCopy] = useState({ visible: false, top: 0, value: "", key: "" });
-
-    const handleMouseMoveOnTextarea = (e) => {
-        const ta = taRef.current;
-        if (!ta) return;
-        const rect = ta.getBoundingClientRect();
-        const lineHeight = parseFloat(sharedTextStyle.lineHeight) * parseFloat(sharedTextStyle.fontSize) || 23;
-        const paddingTop = 16; // from sharedTextStyle
-        // compute the line under the cursor
-        const y = e.clientY - rect.top + ta.scrollTop - paddingTop;
-        const lineIndex = Math.max(0, Math.floor(y / lineHeight));
-        const lines = content.split("\n");
-        const lineText = (lines[lineIndex] || "").trim();
-        const re = /^\s*(?:Email|Username|Password)\s*[:\-]?\s*(.+)$/i;
-        const m = re.exec(lineText);
-        if (m) {
-            // position the button near the right edge of the textarea, vertically aligned with the cursor line
-            const topClient = rect.top + paddingTop + (lineIndex * lineHeight) - ta.scrollTop + (lineHeight / 2);
-            const leftClient = rect.right - 56; // 56px from right edge to place button inside panel gutter
-            setHoverCopy({ visible: true, clientY: topClient, clientX: leftClient, value: m[1].trim(), key: (lineText.split(':')[0] || '').trim() });
-        } else {
-            setHoverCopy((s) => s.visible ? { ...s, visible: false } : s);
+    useEffect(() => {
+        if (taRef.current) {
+            setScrollTop(taRef.current.scrollTop);
         }
-    };
-
-    const handleMouseLeaveTextarea = () => setHoverCopy((s) => s.visible ? { ...s, visible: false } : s);
+    }, [content]);
 
     const scrollToMatch = useCallback((idx) => {
         const ta = taRef.current;
@@ -242,7 +319,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
                 : "var(--font-sans), ui-sans-serif, system-ui, sans-serif",
         fontSize: fontStyle === "mono" ? "13.5px" : "15px",
         lineHeight: fontStyle === "mono" ? "1.65" : "1.6",
-        padding: "16px 20px",
+        padding: "16px 52px 16px 20px",
         whiteSpace: "pre-wrap",
         wordBreak: "break-word",
         tabSize: 4,
@@ -269,7 +346,9 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
 
     const handleCopy = () => {
         const full = title ? `${title}\n\n${content}` : content;
-        navigator.clipboard.writeText(full).then(() => notify("Note copied!"));
+        copyToClipboard(full)
+            .then(() => notify("Note copied!"))
+            .catch((err) => notify("Copy failed: " + err.message, "error"));
     };
 
     const isDesktop = typeof window !== "undefined" && window.innerWidth >= 640;
@@ -397,23 +476,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
                     </span>
                 </div>
 
-                {/* Floating copy button (appears next to credential lines) */}
-                {hoverCopy.visible && (
-                    <button
-                        onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(hoverCopy.value).then(() => notify(`${hoverCopy.key || 'Value'} copied`)); }}
-                        style={{
-                            position: 'fixed',
-                            left: hoverCopy.clientX,
-                            top: hoverCopy.clientY - 12,
-                            zIndex: 1100,
-                            transform: 'translateY(-50%)',
-                        }}
-                        className="w-8 h-8 flex items-center justify-center rounded-md bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
-                        title={`Copy ${hoverCopy.key || 'value'}`}
-                    >
-                        <FiCopy size={14} />
-                    </button>
-                )}
+
 
                 {/* Sum result banner */}
                 {sumResult && (
@@ -496,9 +559,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
                         ref={taRef}
                         value={content}
                         onChange={(e) => { setContent(e.target.value); syncScroll(); }}
-                        onScroll={(e) => { syncScroll(); /* update hover position on scroll */ setHoverCopy((s) => s.visible ? { ...s, visible: false } : s); }}
-                        onMouseMove={handleMouseMoveOnTextarea}
-                        onMouseLeave={handleMouseLeaveTextarea}
+                        onScroll={syncScroll}
                         onKeyDown={(e) => {
                             if ((e.metaKey || e.ctrlKey) && e.key === "f") { e.preventDefault(); srRef.current?.focus(); }
                         }}
@@ -520,6 +581,57 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
                         placeholder="Write your credentials here..."
                         spellCheck={false}
                     />
+                    {/* Floating inline copy buttons layer */}
+                    <div
+                        style={{
+                            position: "absolute",
+                            inset: 0,
+                            pointerEvents: "none",
+                            zIndex: 2,
+                            overflow: "hidden"
+                        }}
+                    >
+                        <div
+                            style={{
+                                transform: `translateY(-${scrollTop}px)`,
+                                position: "relative",
+                                height: taRef.current?.scrollHeight || "100%",
+                            }}
+                        >
+                            {detectedCreds.map((cred, idx) => {
+                                const lineHeight = parseFloat(sharedTextStyle.lineHeight) * parseFloat(sharedTextStyle.fontSize) || 24;
+                                const paddingTop = 16;
+                                const top = paddingTop + cred.lineIndex * lineHeight;
+                                
+                                const font = fontStyle === "mono"
+                                    ? "13.5px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
+                                    : fontStyle === "serif"
+                                        ? "15px ui-serif, Georgia, Cambria, serif"
+                                        : "15px ui-sans-serif, system-ui, sans-serif";
+                                
+                                const linesText = content.split("\n");
+                                const lineText = linesText[cred.lineIndex] || "";
+                                const textWidth = getTextWidth(lineText, font);
+                                
+                                 const paddingLeft = 20;
+                                const gap = 18;
+                                let left = paddingLeft + textWidth + gap;
+                                const maxLeft = (taRef.current?.clientWidth || 500) - 32;
+                                left = Math.min(left, maxLeft);
+                                
+                                return (
+                                    <CredentialCopyButton
+                                        key={idx}
+                                        value={cred.value}
+                                        label={cred.label}
+                                        top={top}
+                                        left={left}
+                                        lineHeight={lineHeight}
+                                    />
+                                );
+                            })}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Inline full-size image previews */}
