@@ -172,3 +172,49 @@
     @apply font-sans;
   }
 }
+
+/* Note Opening Animations (Google Keep Style) */
+@keyframes keep-backdrop-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes keep-note-open-mobile {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes keep-note-open-desktop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.animate-backdrop-fade {
+  animation: keep-backdrop-fade 0.15s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-note-open {
+  animation: keep-note-open-mobile 0.18s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@media (min-width: 640px) {
+  .animate-note-open {
+    animation: keep-note-open-desktop 0.18s cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+}

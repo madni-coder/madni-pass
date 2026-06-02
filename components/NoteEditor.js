@@ -25,18 +25,9 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
         if (!folderId && isNew) { notify("Pehle ek folder select karo", "error"); return; }
         setSaving(true);
         try {
-            // Use client-side encryption for local store as well — get master password from session
+            // Use client-side encryption for local store as well — only retrieve any existing master password
             let master = null;
             try { master = sessionStorage.getItem("masterPassword"); } catch { }
-            if (!master && typeof window !== "undefined") {
-                master = window.prompt("Enter master password to encrypt this note (optional):") || null;
-                try {
-                    if (master) {
-                        sessionStorage.setItem("masterPassword", master);
-                        try { window.dispatchEvent(new CustomEvent("masterPasswordSet")); } catch { }
-                    }
-                } catch { }
-            }
             const encTitle = encrypt(title.trim(), master);
             const encContent = encrypt(content, master);
 

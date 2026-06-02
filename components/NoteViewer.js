@@ -4,7 +4,7 @@ import { createNote, updateNote } from "@/lib/db";
 import { storeImage, getImageSrc } from "@/lib/imageStore";
 import { encrypt } from "@/lib/crypto";
 import { notify } from "@/lib/notify";
-import { FiSearch, FiX, FiChevronUp, FiChevronDown, FiImage, FiLoader, FiCheck, FiMoreHorizontal, FiHash, FiCopy, FiWifiOff } from "react-icons/fi";
+import { FiSearch, FiX, FiChevronUp, FiChevronDown, FiImage, FiLoader, FiCheck, FiMoreHorizontal, FiHash, FiCopy, FiWifiOff, FiArrowLeft } from "react-icons/fi";
 
 function escHtml(str) {
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -152,23 +152,13 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
         clearTimeout(saveTimerRef.current);
         saveTimerRef.current = setTimeout(async () => {
             try {
+                // Create note if it doesn't exist yet
                 if (!noteIdRef.current) {
-                    if (creatingRef.current) return; // prevent duplicate creation if previous create is still pending
+                    if (creatingRef.current) return;
                     creatingRef.current = true;
                     try {
-                        // ensure content/title are encrypted client-side
                         let master = null;
                         try { master = sessionStorage.getItem("masterPassword"); } catch { }
-                        if (!master && typeof window !== "undefined") {
-                            master = window.prompt("Enter master password to encrypt this note:") || null;
-                            try {
-                                if (master) {
-                                    sessionStorage.setItem("masterPassword", master);
-                                    // notify other parts of the app that a master password was set
-                                    try { window.dispatchEvent(new CustomEvent("masterPasswordSet")); } catch { }
-                                }
-                            } catch { }
-                        }
                         const encTitle = encrypt(title.trim(), master);
                         const encContent = encrypt(content, master);
                         const id = await createNote(userId, folderId ?? null, encTitle, encContent);
@@ -181,15 +171,6 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
                 } else {
                     let master = null;
                     try { master = sessionStorage.getItem("masterPassword"); } catch { }
-                    if (!master && typeof window !== "undefined") {
-                        master = window.prompt("Enter master password to encrypt this note:") || null;
-                        try {
-                            if (master) {
-                                sessionStorage.setItem("masterPassword", master);
-                                try { window.dispatchEvent(new CustomEvent("masterPasswordSet")); } catch { }
-                            }
-                        } catch { }
-                    }
                     const encTitle = encrypt(title.trim(), master);
                     const encContent = encrypt(content, master);
                     await updateNote(noteIdRef.current, encTitle, encContent, imagesRef.current);
@@ -321,13 +302,21 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
             {/* Backdrop overlay */}
             <div
                 onClick={onClose}
+                className="animate-backdrop-fade"
                 style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)" }}
             />
             {/* Modal panel */}
-            <div style={panelStyle}>
+            <div style={panelStyle} className="animate-note-open">
                 {/* Title area — accented */}
                 <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b-2 border-primary/60 bg-card/70">
-                    <div className="w-1 h-7 rounded-full bg-primary shrink-0" />
+                    <button
+                        onClick={onClose}
+                        className="flex sm:hidden w-8 h-8 items-center justify-center rounded-lg bg-muted text-foreground hover:bg-muted/80 transition-colors mr-1 shrink-0"
+                        aria-label="Back"
+                    >
+                        <FiArrowLeft size={18} />
+                    </button>
+                    <div className="hidden sm:block w-1 h-7 rounded-full bg-primary shrink-0" />
                     <input
                         autoFocus
                         placeholder="Note title..."
@@ -373,7 +362,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
                         {/* Close button inside flex — no overlap */}
                         <button
                             onClick={onClose}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg bg-muted text-foreground hover:bg-destructive/20 hover:text-destructive transition-colors"
+                            className="hidden sm:flex w-8 h-8 items-center justify-center rounded-lg bg-muted text-foreground hover:bg-destructive/20 hover:text-destructive transition-colors"
                         >
                             <FiX size={18} />
                         </button>
