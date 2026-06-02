@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { createNote, updateNoteData } from "@/lib/storage";
 import { encrypt } from "@/lib/crypto";
-import { saveImage, removeImage, loadImageUrl } from "@/lib/imageStore";
+import { uploadToCloudinary } from "@/lib/imageStore";
 import { notify } from "@/lib/notify";
 import { Save, X, ImagePlus, Loader2 } from "lucide-react";
 
@@ -16,19 +16,9 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
     const [title, setTitle] = useState(note?.title || "");
     const [content, setContent] = useState(note?.content || "");
     const [images, setImages] = useState(note?.images || []);
-    const [imgUrls, setImgUrls] = useState({});
     const [uploading, setUploading] = useState(false);
     const [saving, setSaving] = useState(false);
     const fileRef = useRef(null);
-
-    // Load blob URLs for existing images
-    useEffect(() => {
-        images.forEach(async (img) => {
-            const url = await loadImageUrl(img.id);
-            if (url) setImgUrls((prev) => ({ ...prev, [img.id]: url }));
-        });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
 
     const handleSave = async () => {
         if (!title.trim()) { notify("Note ka title dalo", "error"); return; }
@@ -64,21 +54,18 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
     const handleImageUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        if (file.size > 100 * 1024 * 1024) { notify("Image 100MB se badi nahi honi chahiye", "error"); return; }
+        if (file.size > 10 * 1024 * 1024) { notify("Image 10MB se badi nahi honi chahiye", "error"); return; }
         if (isNew) { notify("Pehle note save karo, phir image daalo", "error"); return; }
         setUploading(true);
         try {
-            const id = Date.now().toString(36) + Math.random().toString(36).slice(2);
-            await saveImage(id, file);
-            const url = URL.createObjectURL(file);
-            const newImg = { id, name: file.name };
+            const { url, publicId, name } = await uploadToCloudinary(file);
+            const newImg = { url, publicId, name };
             const newImages = [...images, newImg];
             setImages(newImages);
-            setImgUrls((prev) => ({ ...prev, [id]: url }));
             updateNoteData(note.id, title, content, newImages);
             notify("Image add ho gayi!");
-        } catch {
-            notify("Image upload nahi hui", "error");
+        } catch (err) {
+            notify("Image upload nahi hui: " + (err?.message || err), "error");
         } finally {
             setUploading(false);
             e.target.value = "";
@@ -86,15 +73,10 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
     };
 
     const handleDeleteImage = async (img, idx) => {
-        try {
-            await removeImage(img.id);
-            const newImages = images.filter((_, i) => i !== idx);
-            setImages(newImages);
-            updateNoteData(note.id, title, content, newImages);
-            notify("Image delete ho gayi!");
-        } catch {
-            notify("Image delete nahi hui", "error");
-        }
+        const newImages = images.filter((_, i) => i !== idx);
+        setImages(newImages);
+        updateNoteData(note.id, title, content, newImages);
+        notify("Image delete ho gayi!");
     };
 
     return (
@@ -133,10 +115,10 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
                                 <Label className="text-sm text-gray-400">Images</Label>
                                 <div className="flex flex-wrap gap-2">
                                     {images.map((img, idx) => (
-                                        <div key={img.id} className="relative group">
-                                            {imgUrls[img.id] ? (
+                                        <div key={idx} className="relative group">
+                                            {img.url ? (
                                                 // eslint-disable-next-line @next/next/no-img-element
-                                                <img src={imgUrls[img.id]} alt={img.name} className="w-24 h-24 object-cover rounded-lg border border-gray-700" />
+                                                <img src={img.url} alt={img.name} className="w-24 h-24 object-cover rounded-lg border border-gray-700" />
                                             ) : (
                                                 <div className="w-24 h-24 bg-gray-800 rounded-lg border border-gray-700 flex items-center justify-center">
                                                     <Loader2 className="w-4 h-4 animate-spin text-gray-500" />

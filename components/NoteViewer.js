@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { createNote, updateNote, uploadImage, deleteImage } from "@/lib/db";
+import { createNote, updateNote } from "@/lib/db";
+import { uploadToCloudinary } from "@/lib/imageStore";
 import { encrypt } from "@/lib/crypto";
 import { notify } from "@/lib/notify";
 import { FiSearch, FiX, FiChevronUp, FiChevronDown, FiImage, FiLoader, FiCheck, FiMoreHorizontal, FiHash, FiCopy, FiWifiOff } from "react-icons/fi";
@@ -87,8 +88,6 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
         return () => document.removeEventListener("keydown", handler);
     }, [onClose]);
 
-    // No IndexedDB loading needed — Firebase Storage URLs are stored directly in images array
-
     const matches = findMatches(content, inSearch);
 
     const syncScroll = useCallback(() => {
@@ -171,25 +170,25 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
     const handleImageUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        if (file.size > 10 * 1024 * 1024) { notify("Image 10MB se badi nahi honi chahiye", "error"); return; }
         if (!noteIdRef.current) { notify("Pehle note ka title likho, phir image daalo", "error"); return; }
         setUploading(true);
         try {
-            const { url, path } = await uploadImage(userId, noteIdRef.current, file);
-            const newImgs = [...imagesRef.current, { url, path, name: file.name }];
+            const { url, publicId, name } = await uploadToCloudinary(file);
+            const newImgs = [...imagesRef.current, { url, publicId, name }];
             setImages(newImgs);
-            // update encrypted content on server
             let master = null;
             try { master = sessionStorage.getItem("masterPassword"); } catch { }
             const encTitle = encrypt(title, master);
             const encContent = encrypt(content, master);
             await updateNote(noteIdRef.current, encTitle, encContent, newImgs);
+            onSave({ id: noteIdRef.current, title, content, images: newImgs });
             notify("Image attached!");
-        } catch { notify("Failed to upload image", "error"); }
+        } catch (err) { notify("Failed to upload image: " + (err?.message || err), "error"); }
         finally { setUploading(false); e.target.value = ""; }
     };
 
     const handleDeleteImage = async (img, idx) => {
-        if (img.path) await deleteImage(img.path).catch(() => { });
         const newImgs = images.filter((_, i) => i !== idx);
         setImages(newImgs);
         if (noteIdRef.current) {
@@ -198,6 +197,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
             const encTitle = encrypt(title, master);
             const encContent = encrypt(content, master);
             await updateNote(noteIdRef.current, encTitle, encContent, newImgs);
+            onSave({ id: noteIdRef.current, title, content, images: newImgs });
         }
         notify("Image removed");
     };
