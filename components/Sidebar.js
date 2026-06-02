@@ -20,6 +20,7 @@ import { useTheme } from "next-themes";
 
 export default function Sidebar({ folders, setFolders, selectedFolder, onSelectFolder, userId, onLogout }) {
     const { theme, setTheme } = useTheme();
+    const logoSrc = (theme === "light") ? "/lightLogo.png" : "/lazyNoteIcon.png";
     const [newFolderName, setNewFolderName] = useState("");
     const [showNewFolder, setShowNewFolder] = useState(false);
     const [renameTarget, setRenameTarget] = useState(null);
@@ -59,19 +60,22 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
     const SidebarContent = () => (
         <div className="flex flex-col h-full">
             <div className="px-4 py-5 border-b border-border">
-                <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
-                        <FiLock size={16} className="text-primary-foreground" />
-                    </div>
-                    <span className="font-bold text-foreground text-lg">Madni Notes</span>
+                <div className="flex items-center gap-3">
+                    <img
+                        src={logoSrc}
+                        alt="Lazy Notes"
+                        className="w-9 h-9 rounded-lg object-contain shrink-0"
+                        onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/lazyNoteIcon.png'; }}
+                    />
+                    <span className="font-bold text-foreground text-lg">Lazy <span className="text-primary">Notes</span></span>
                 </div>
             </div>
 
             <div className="px-3 py-3 flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Folders</span>
+                <span className="text-xs font-semibold text-foreground uppercase tracking-wider">Folders</span>
                 <button
                     onClick={() => setShowNewFolder(true)}
-                    className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-muted transition-colors"
+                    className="w-6 h-6 rounded flex items-center justify-center text-foreground hover:text-primary hover:bg-muted transition-colors"
                 >
                     <FiPlus size={16} />
                 </button>
@@ -80,7 +84,7 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
             <ScrollArea className="flex-1 px-2">
                 <button
                     onClick={() => { onSelectFolder(null); setMobileOpen(false); }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors mb-1 ${!selectedFolder ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors mb-1 ${!selectedFolder ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted"
                         }`}
                 >
                     <BiFolderOpen size={16} className="shrink-0" />
@@ -92,7 +96,7 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                         key={folder.id}
                         className={`group flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors mb-1 ${selectedFolder?.id === folder.id
                             ? "bg-primary text-primary-foreground"
-                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                            : "text-foreground hover:bg-muted"
                             }`}
                     >
                         <button

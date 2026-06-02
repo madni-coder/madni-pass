@@ -1,11 +1,11 @@
-import { Bitter, Fira_Code, Manrope } from "next/font/google";
+import { Inter, Merriweather, Fira_Code } from "next/font/google";
 import "./globals.css";
 import Notifications from "@/components/ui/notifications";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "next-themes";
 
-const manrope = Manrope({ subsets: ["latin"], variable: "--font-sans" });
-const bitter = Bitter({ subsets: ["latin"], variable: "--font-serif" });
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans", weight: ["400", "600", "700"] });
+const merriweather = Merriweather({ subsets: ["latin"], variable: "--font-serif", weight: ["400", "700"] });
 const firaCode = Fira_Code({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata = {
@@ -16,7 +16,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${manrope.variable} ${bitter.variable} ${firaCode.variable} bg-background text-foreground antialiased`} style={{ fontFamily: "var(--font-sans, sans-serif)" }}>
+      <body className={`${inter.variable} ${merriweather.variable} ${firaCode.variable} bg-background text-foreground antialiased`} style={{ fontFamily: "var(--font-sans, sans-serif)" }}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <AuthProvider>
             {children}

@@ -200,7 +200,7 @@ export default function Home() {
               <h2 className="text-lg font-semibold text-foreground">
                 {searchQuery ? `Search: "${searchQuery}"` : selectedFolder ? selectedFolder.name : "All Notes"}
               </h2>
-              <p className="text-sm text-muted-foreground">{filteredNotes.length} note{filteredNotes.length !== 1 ? "s" : ""}{searchQuery && " found"}</p>
+              <p className="text-sm text-foreground">{filteredNotes.length} note{filteredNotes.length !== 1 ? "s" : ""}{searchQuery && " found"}</p>
             </div>
 
             {filteredNotes.length === 0 && (
@@ -302,11 +302,11 @@ function NoteCard({ note, folderName, searchQuery, onClick, onDelete }) {
 
         {/* Content preview */}
         {snippet ? (
-          <p className="text-[11px] text-muted-foreground/70 leading-relaxed line-clamp-3 whitespace-pre-wrap flex-1">
+          <p className="text-[11px] text-foreground leading-relaxed line-clamp-3 whitespace-pre-wrap flex-1">
             {highlight(snippet, searchQuery)}
           </p>
         ) : (
-          <p className="text-[11px] text-muted-foreground/30 italic flex-1">No content yet...</p>
+          <p className="text-[11px] text-foreground italic flex-1">No content yet...</p>
         )}
       </div>
 
@@ -314,7 +314,7 @@ function NoteCard({ note, folderName, searchQuery, onClick, onDelete }) {
       <div className="flex items-center justify-between px-4 py-2.5 border-t border-border/30 bg-muted/20">
         <div className="flex items-center gap-1.5 flex-wrap min-w-0">
           {date && (
-            <span className="text-[10px] text-muted-foreground/50 font-medium tracking-wide shrink-0">{date}</span>
+            <span className="text-[10px] text-foreground font-medium tracking-wide shrink-0">{date}</span>
           )}
           {folderName && (
             <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary/70 border border-primary/20 px-1.5 py-0 h-4 font-medium">
@@ -322,12 +322,12 @@ function NoteCard({ note, folderName, searchQuery, onClick, onDelete }) {
             </Badge>
           )}
           {note.images?.length > 0 && (
-            <span className="text-[10px] text-muted-foreground/40">📎 {note.images.length}</span>
+            <span className="text-[10px] text-foreground">📎 {note.images.length}</span>
           )}
         </div>
         <button
           onClick={onDelete}
-          className="w-6 h-6 flex items-center justify-center rounded-lg text-muted-foreground/20 hover:text-destructive hover:bg-destructive/10 transition-all duration-150 opacity-0 group-hover:opacity-100 shrink-0"
+          className="w-6 h-6 flex items-center justify-center rounded-lg text-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-150 opacity-0 group-hover:opacity-100 shrink-0"
         >
           <FiTrash2 size={11} />
         </button>

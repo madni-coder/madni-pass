@@ -3,12 +3,14 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FiLock } from "react-icons/fi";
+import { useTheme } from "next-themes";
 import { FcGoogle } from "react-icons/fc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export default function AuthPage() {
     const { user, signInWithGoogle, signInWithTestCredentials, loading } = useAuth();
+    const { theme } = useTheme();
     const router = useRouter();
     const [signingIn, setSigningIn] = useState(false);
     const [error, setError] = useState("");
@@ -67,11 +69,16 @@ export default function AuthPage() {
         <div className="min-h-screen flex items-center justify-center bg-background">
             <div className="w-full max-w-sm p-8 rounded-xl border border-border bg-card space-y-6">
                 <div className="flex flex-col items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
-                        <FiLock size={22} className="text-primary-foreground" />
+                    <div className="w-12 h-12 rounded-xl bg-transparent flex items-center justify-center">
+                        <img
+                            src={theme === "light" ? "/lightLogo.png" : "/lazyNoteIcon.png"}
+                            alt="Lazy Notes"
+                            className="w-10 h-10 object-contain"
+                            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/lazyNoteIcon.png'; }}
+                        />
                     </div>
-                    <h1 className="text-xl font-bold text-foreground">Madni Notes</h1>
-                    <p className="text-sm text-muted-foreground text-center">Apne notes securely store karo</p>
+                    <h1 className="text-xl font-bold text-foreground">Lazy <span className="text-primary">Notes</span></h1>
+                    <p className="text-sm text-foreground text-center">Apne notes securely store karo</p>
                 </div>
 
                 {error && <p className="text-sm text-destructive text-center">{error}</p>}
@@ -96,7 +103,7 @@ export default function AuthPage() {
                     <Button onClick={handleTestLogin} disabled={signingIn} className="w-full">
                         {signingIn ? "Signing in..." : "Login with Test Account"}
                     </Button>
-                    <p className="text-xs text-muted-foreground text-center">Test login: ID test, password 123</p>
+                    <p className="text-xs text-foreground text-center">Test login: ID test, password 123</p>
                 </div>
 
                 <div className="relative">
@@ -104,7 +111,7 @@ export default function AuthPage() {
                         <span className="w-full border-t border-border" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-card px-2 text-muted-foreground">Or</span>
+                        <span className="bg-card px-2 text-foreground">Or</span>
                     </div>
                 </div>
 
