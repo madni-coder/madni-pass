@@ -108,6 +108,13 @@ export default function Home() {
 
   useEffect(() => { loadNotes(); }, [loadNotes]);
 
+  // If a master password is set elsewhere (NoteViewer prompts and stores it), reload notes
+  useEffect(() => {
+    const handler = () => { loadNotes(); };
+    try { window.addEventListener("masterPasswordSet", handler); } catch { }
+    return () => { try { window.removeEventListener("masterPasswordSet", handler); } catch { } };
+  }, [loadNotes]);
+
   const filteredNotes = searchQuery
     ? notes.filter((n) => {
       const q = searchQuery.toLowerCase();

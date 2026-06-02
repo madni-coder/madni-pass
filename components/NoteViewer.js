@@ -161,7 +161,13 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
                         try { master = sessionStorage.getItem("masterPassword"); } catch { }
                         if (!master && typeof window !== "undefined") {
                             master = window.prompt("Enter master password to encrypt this note:") || null;
-                            try { if (master) sessionStorage.setItem("masterPassword", master); } catch { }
+                            try {
+                                if (master) {
+                                    sessionStorage.setItem("masterPassword", master);
+                                    // notify other parts of the app that a master password was set
+                                    try { window.dispatchEvent(new CustomEvent("masterPasswordSet")); } catch { }
+                                }
+                            } catch { }
                         }
                         const encTitle = encrypt(title.trim(), master);
                         const encContent = encrypt(content, master);
@@ -177,7 +183,12 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
                     try { master = sessionStorage.getItem("masterPassword"); } catch { }
                     if (!master && typeof window !== "undefined") {
                         master = window.prompt("Enter master password to encrypt this note:") || null;
-                        try { if (master) sessionStorage.setItem("masterPassword", master); } catch { }
+                        try {
+                            if (master) {
+                                sessionStorage.setItem("masterPassword", master);
+                                try { window.dispatchEvent(new CustomEvent("masterPasswordSet")); } catch { }
+                            }
+                        } catch { }
                     }
                     const encTitle = encrypt(title.trim(), master);
                     const encContent = encrypt(content, master);

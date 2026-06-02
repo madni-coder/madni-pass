@@ -30,7 +30,12 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
             try { master = sessionStorage.getItem("masterPassword"); } catch { }
             if (!master && typeof window !== "undefined") {
                 master = window.prompt("Enter master password to encrypt this note (optional):") || null;
-                try { if (master) sessionStorage.setItem("masterPassword", master); } catch { }
+                try {
+                    if (master) {
+                        sessionStorage.setItem("masterPassword", master);
+                        try { window.dispatchEvent(new CustomEvent("masterPasswordSet")); } catch { }
+                    }
+                } catch { }
             }
             const encTitle = encrypt(title.trim(), master);
             const encContent = encrypt(content, master);
