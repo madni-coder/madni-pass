@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export default function AuthPage() {
-    const { user, signInWithGoogle, signInWithTestCredentials, loading } = useAuth();
+    const { user, signInWithGoogle, signInWithGoogleSelectAccount, forgetLastGoogleEmail, signInWithTestCredentials, loading } = useAuth();
     const { theme } = useTheme();
     const router = useRouter();
     const [signingIn, setSigningIn] = useState(false);
@@ -135,6 +135,22 @@ export default function AuthPage() {
                     <FcGoogle size={18} />
                     {signingIn ? "Signing in..." : "Continue with Google"}
                 </Button>
+                <div className="flex justify-between items-center mt-2 text-xs">
+                    <button
+                        type="button"
+                        onClick={() => signInWithGoogleSelectAccount()}
+                        className="text-primary underline"
+                    >
+                        Use different Google account
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => { forgetLastGoogleEmail(); }}
+                        className="text-foreground/70"
+                    >
+                        Forget saved account
+                    </button>
+                </div>
             </div>
         </div>
     );
