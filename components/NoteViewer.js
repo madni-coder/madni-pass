@@ -24,16 +24,45 @@ function parseCredentials(content) {
     if (!content) return [];
     const lines = content.split("\n");
     const creds = [];
-    const regex = /^\s*(?:[\w\s\/]+?\s+)?(email|mail|gmail|username|user|login|id|password|pass|pswd|pin|key|token|link|website|url)\s*[:\-=\s]\s*(.+)$/i;
+    const labelRegex = /^\s*(?:[\w\s\/]+?\s+)?(email|mail|gmail|username|user|login|id|password|pass|pswd|pin|key|token|link|website|url)\s*[:\-=\s]\s*(.+)$/i;
+    const emailRegex = /([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/;
+    const urlRegex = /((?:https?:\/\/|www\.)\S+)/i;
+
     lines.forEach((lineText, index) => {
-        const m = regex.exec(lineText);
-        if (m && m[2].trim().length > 0) {
+        // 1. Try label-based match
+        const mLabel = labelRegex.exec(lineText);
+        if (mLabel && mLabel[2].trim().length > 0) {
             creds.push({
                 lineIndex: index,
-                key: m[1].toLowerCase(),
-                label: m[1],
-                value: m[2].trim()
+                key: mLabel[1].toLowerCase(),
+                label: mLabel[1],
+                value: mLabel[2].trim()
             });
+            return;
+        }
+
+        // 2. Try raw email match
+        const mEmail = emailRegex.exec(lineText);
+        if (mEmail) {
+            creds.push({
+                lineIndex: index,
+                key: "email",
+                label: "Email",
+                value: mEmail[1].trim()
+            });
+            return;
+        }
+
+        // 3. Try raw URL match
+        const mUrl = urlRegex.exec(lineText);
+        if (mUrl) {
+            creds.push({
+                lineIndex: index,
+                key: "link",
+                label: "Link",
+                value: mUrl[1].trim()
+            });
+            return;
         }
     });
     return creds;
