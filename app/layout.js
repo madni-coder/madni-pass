@@ -4,7 +4,7 @@ import Notifications from "@/components/ui/notifications";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "next-themes";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans", weight: ["400", "600", "700"] });
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const merriweather = Merriweather({ subsets: ["latin"], variable: "--font-serif", weight: ["400", "700"] });
 const firaCode = Fira_Code({ subsets: ["latin"], variable: "--font-mono" });
 

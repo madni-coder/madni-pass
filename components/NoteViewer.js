@@ -53,6 +53,17 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef(null);
     const [isOnline, setIsOnline] = useState(typeof window !== "undefined" ? navigator.onLine : true);
+    const [fontStyle, setFontStyle] = useState(() => {
+        if (typeof window !== "undefined") {
+            return localStorage.getItem("note_font_style") || "sans";
+        }
+        return "sans";
+    });
+
+    const handleFontStyleChange = (style) => {
+        setFontStyle(style);
+        localStorage.setItem("note_font_style", style);
+    };
 
     useEffect(() => {
         const goOnline = () => setIsOnline(true);
@@ -224,9 +235,13 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
     };
 
     const sharedTextStyle = {
-        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-        fontSize: "14px",
-        lineHeight: "1.625",
+        fontFamily: fontStyle === "mono"
+            ? "var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
+            : fontStyle === "serif"
+                ? "var(--font-serif), ui-serif, Georgia, Cambria, serif"
+                : "var(--font-sans), ui-sans-serif, system-ui, sans-serif",
+        fontSize: fontStyle === "mono" ? "13.5px" : "15px",
+        lineHeight: fontStyle === "mono" ? "1.65" : "1.6",
         padding: "16px 20px",
         whiteSpace: "pre-wrap",
         wordBreak: "break-word",
@@ -335,11 +350,29 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
                             {menuOpen && (
                                 <div style={{
                                     position: "absolute", top: "110%", right: 0,
-                                    zIndex: 9999, minWidth: 168,
+                                    zIndex: 9999, minWidth: 190,
                                     background: "var(--popover)", border: "1px solid var(--border)",
                                     borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
                                     padding: "4px 0",
                                 }}>
+                                    <div className="px-3 py-2 border-b border-border">
+                                        <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Typography</div>
+                                        <div className="flex bg-muted/60 p-0.5 rounded-lg border border-border/40">
+                                            {["sans", "serif", "mono"].map((style) => (
+                                                <button
+                                                    key={style}
+                                                    onClick={() => handleFontStyleChange(style)}
+                                                    className={`flex-1 text-center py-1 text-[11px] font-medium rounded-md capitalize transition-all select-none ${
+                                                        fontStyle === style
+                                                            ? "bg-card text-foreground shadow-xs font-semibold"
+                                                            : "text-muted-foreground hover:text-foreground hover:bg-card/30"
+                                                    }`}
+                                                >
+                                                    {style}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
                                     <button onClick={() => { handleSum(); setMenuOpen(false); }}
                                         className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-foreground hover:bg-muted transition-colors"
                                     >

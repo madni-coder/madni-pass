@@ -82,8 +82,8 @@
   --sidebar-accent-foreground: #ce8264;
   --sidebar-border: #e2e0d5;
   --sidebar-ring: #bb5e3a;
-  --font-sans: "Manrope", ui-sans-serif, sans-serif, system-ui;
-  --font-serif: "Bitter", ui-serif, serif;
+  --font-sans: "Inter", ui-sans-serif, sans-serif, system-ui;
+  --font-serif: "Merriweather", ui-serif, serif;
   --font-mono: "Fira Code", ui-monospace, monospace;
   --tracking-normal: -0.01em;
   --spacing: 0.23rem;
@@ -137,8 +137,8 @@
   --sidebar-accent-foreground: #4cc9d0;
   --sidebar-border: #2a3241;
   --sidebar-ring: #4cc9d0;
-  --font-sans: "Manrope", ui-sans-serif, sans-serif, system-ui;
-  --font-serif: "Bitter", ui-serif, serif;
+  --font-sans: "Inter", ui-sans-serif, sans-serif, system-ui;
+  --font-serif: "Merriweather", ui-serif, serif;
   --font-mono: "Fira Code", ui-monospace, monospace;
   --tracking-normal: -0.01em;
   --spacing: 0.23rem;
