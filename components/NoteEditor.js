@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { createNote, updateNoteData } from "@/lib/storage";
 import { encrypt } from "@/lib/crypto";
-import { uploadToCloudinary } from "@/lib/imageStore";
+import { storeImage, getImageSrc } from "@/lib/imageStore";
 import { notify } from "@/lib/notify";
 import { Save, X, ImagePlus, Loader2 } from "lucide-react";
 
@@ -58,9 +58,10 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
         if (isNew) { notify("Pehle note save karo, phir image daalo", "error"); return; }
         setUploading(true);
         try {
-            const { url, publicId, name } = await uploadToCloudinary(file);
-            const newImg = { url, publicId, name };
-            const newImages = [...images, newImg];
+            let master = null;
+            try { master = sessionStorage.getItem("masterPassword"); } catch { }
+            const imgData = await storeImage(file, master);
+            const newImages = [...images, imgData];
             setImages(newImages);
             updateNoteData(note.id, title, content, newImages);
             notify("Image add ho gayi!");
@@ -71,6 +72,12 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
             e.target.value = "";
         }
     };
+
+    const displayImages = useMemo(() => {
+        let master = null;
+        try { master = sessionStorage.getItem("masterPassword"); } catch { }
+        return images.map(img => ({ ...img, displaySrc: getImageSrc(img, master) }));
+    }, [images]);
 
     const handleDeleteImage = async (img, idx) => {
         const newImages = images.filter((_, i) => i !== idx);
@@ -114,11 +121,11 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
                             <div className="space-y-2">
                                 <Label className="text-sm text-gray-400">Images</Label>
                                 <div className="flex flex-wrap gap-2">
-                                    {images.map((img, idx) => (
+                                    {displayImages.map((img, idx) => (
                                         <div key={idx} className="relative group">
-                                            {img.url ? (
+                                            {img.displaySrc ? (
                                                 // eslint-disable-next-line @next/next/no-img-element
-                                                <img src={img.url} alt={img.name} className="w-24 h-24 object-cover rounded-lg border border-gray-700" />
+                                                <img src={img.displaySrc} alt={img.name} className="w-24 h-24 object-cover rounded-lg border border-gray-700" />
                                             ) : (
                                                 <div className="w-24 h-24 bg-gray-800 rounded-lg border border-gray-700 flex items-center justify-center">
                                                     <Loader2 className="w-4 h-4 animate-spin text-gray-500" />

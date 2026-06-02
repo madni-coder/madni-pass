@@ -1,7 +1,7 @@
 "use client";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { createNote, updateNote } from "@/lib/db";
-import { uploadToCloudinary } from "@/lib/imageStore";
+import { storeImage, getImageSrc } from "@/lib/imageStore";
 import { encrypt } from "@/lib/crypto";
 import { notify } from "@/lib/notify";
 import { FiSearch, FiX, FiChevronUp, FiChevronDown, FiImage, FiLoader, FiCheck, FiMoreHorizontal, FiHash, FiCopy, FiWifiOff } from "react-icons/fi";
@@ -174,11 +174,11 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
         if (!noteIdRef.current) { notify("Pehle note ka title likho, phir image daalo", "error"); return; }
         setUploading(true);
         try {
-            const { url, publicId, name } = await uploadToCloudinary(file);
-            const newImgs = [...imagesRef.current, { url, publicId, name }];
-            setImages(newImgs);
             let master = null;
             try { master = sessionStorage.getItem("masterPassword"); } catch { }
+            const imgData = await storeImage(file, master);
+            const newImgs = [...imagesRef.current, imgData];
+            setImages(newImgs);
             const encTitle = encrypt(title, master);
             const encContent = encrypt(content, master);
             await updateNote(noteIdRef.current, encTitle, encContent, newImgs);
@@ -187,6 +187,12 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
         } catch (err) { notify("Failed to upload image: " + (err?.message || err), "error"); }
         finally { setUploading(false); e.target.value = ""; }
     };
+
+    const displayImages = useMemo(() => {
+        let master = null;
+        try { master = sessionStorage.getItem("masterPassword"); } catch { }
+        return images.map(img => ({ ...img, displaySrc: getImageSrc(img, master) }));
+    }, [images]);
 
     const handleDeleteImage = async (img, idx) => {
         const newImgs = images.filter((_, i) => i !== idx);
@@ -432,12 +438,12 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
                 {/* Inline full-size image previews */}
                 {noteCreated && images.length > 0 && (
                     <div className="border-t border-border/40 overflow-y-auto flex flex-col gap-3 px-5 py-4" style={{ maxHeight: "45vh" }}>
-                        {images.map((img, idx) =>
-                            img.url ? (
-                                <a key={idx} href={img.url} target="_blank" rel="noopener noreferrer" className="block">
+                        {displayImages.map((img, idx) =>
+                            img.displaySrc ? (
+                                <div key={idx} className="block">
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img
-                                        src={img.url}
+                                        src={img.displaySrc}
                                         alt={img.name}
                                         style={{
                                             maxWidth: "100%",
@@ -450,7 +456,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
                                             display: "block",
                                         }}
                                     />
-                                </a>
+                                </div>
                             ) : null
                         )}
                     </div>
@@ -459,13 +465,11 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
                 {/* Images row */}
                 {noteCreated && (
                     <div className="border-t border-border px-5 py-3 flex items-center gap-2 flex-wrap">
-                        {images.map((img, idx) => (
+                        {displayImages.map((img, idx) => (
                             <div key={idx} className="relative group shrink-0">
-                                {img.url ? (
-                                    <a href={img.url} target="_blank" rel="noopener noreferrer">
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img src={img.url} alt={img.name} className="w-14 h-14 object-cover rounded-lg border border-border hover:border-primary transition-colors" />
-                                    </a>
+                                {img.displaySrc ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={img.displaySrc} alt={img.name} className="w-14 h-14 object-cover rounded-lg border border-border hover:border-primary transition-colors" />
                                 ) : (
                                     <div className="w-14 h-14 bg-muted rounded-lg border border-border flex items-center justify-center">
                                         <FiLoader size={12} className="animate-spin text-muted-foreground/60" />

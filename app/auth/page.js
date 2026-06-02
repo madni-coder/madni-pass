@@ -16,6 +16,7 @@ export default function AuthPage() {
     const [error, setError] = useState("");
     const [loginId, setLoginId] = useState("test");
     const [password, setPassword] = useState("123");
+    const [showTestForm, setShowTestForm] = useState(false);
 
     useEffect(() => {
         if (!loading && user) router.replace("/");
@@ -84,26 +85,41 @@ export default function AuthPage() {
                 {error && <p className="text-sm text-destructive text-center">{error}</p>}
 
                 <div className="space-y-3">
-                    <Input
-                        value={loginId}
-                        onChange={(e) => setLoginId(e.target.value)}
-                        placeholder="User ID"
-                        autoComplete="username"
-                    />
-                    <Input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Password"
-                        autoComplete="current-password"
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") handleTestLogin();
-                        }}
-                    />
-                    <Button onClick={handleTestLogin} disabled={signingIn} className="w-full">
-                        {signingIn ? "Signing in..." : "Login with Test Account"}
-                    </Button>
-                    <p className="text-xs text-foreground text-center">Test login: ID test, password 123</p>
+                    <div className="flex justify-center">
+                        <button
+                            type="button"
+                            onClick={() => setShowTestForm((s) => !s)}
+                            aria-expanded={showTestForm}
+                            className="text-sm text-primary underline"
+                        >
+                            {showTestForm ? "Hide test login" : "Show test login"}
+                        </button>
+                    </div>
+
+                    {showTestForm && (
+                        <div className="space-y-3">
+                            <Input
+                                value={loginId}
+                                onChange={(e) => setLoginId(e.target.value)}
+                                placeholder="User ID"
+                                autoComplete="username"
+                            />
+                            <Input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="Password"
+                                autoComplete="current-password"
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") handleTestLogin();
+                                }}
+                            />
+                            <Button onClick={handleTestLogin} disabled={signingIn} className="w-full">
+                                {signingIn ? "Signing in..." : "Login with Test Account"}
+                            </Button>
+                            <p className="text-xs text-foreground text-center">Test login: ID test, password 123</p>
+                        </div>
+                    )}
                 </div>
 
                 <div className="relative">
