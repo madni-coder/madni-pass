@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { createNote, updateNoteData } from "@/lib/storage";
+import { encrypt } from "@/lib/crypto";
 import { saveImage, removeImage, loadImageUrl } from "@/lib/imageStore";
 import { notify } from "@/lib/notify";
 import { Save, X, ImagePlus, Loader2 } from "lucide-react";
@@ -34,12 +35,22 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
         if (!folderId && isNew) { notify("Pehle ek folder select karo", "error"); return; }
         setSaving(true);
         try {
+            // Use client-side encryption for local store as well — get master password from session
+            let master = null;
+            try { master = sessionStorage.getItem("masterPassword"); } catch { }
+            if (!master && typeof window !== "undefined") {
+                master = window.prompt("Enter master password to encrypt this note (optional):") || null;
+                try { if (master) sessionStorage.setItem("masterPassword", master); } catch { }
+            }
+            const encTitle = encrypt(title.trim(), master);
+            const encContent = encrypt(content, master);
+
             if (isNew) {
-                const saved = createNote(folderId, title.trim(), content);
+                const saved = createNote(folderId, encTitle, encContent);
                 onSave({ ...saved });
                 notify("Note save ho gaya!");
             } else {
-                updateNoteData(note.id, title.trim(), content, images);
+                updateNoteData(note.id, encTitle, encContent, images);
                 onSave({ ...note, title: title.trim(), content, images });
                 notify("Note update ho gaya!");
             }

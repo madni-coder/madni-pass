@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getFolders, getAllNotes, getNotes, deleteNote } from "@/lib/db";
+import { decrypt } from "@/lib/crypto";
 import Sidebar from "@/components/Sidebar";
 import NoteViewer from "@/components/NoteViewer";
 import { Button } from "@/components/ui/button";
@@ -82,8 +83,24 @@ export default function Home() {
       const raw = selectedFolder
         ? await getNotes(user.uid, selectedFolder.id)
         : await getAllNotes(user.uid);
-      writeNotesCache(selectedFolder, raw);
-      setNotes(raw);
+
+      // Try to get master password from sessionStorage. If not present, prompt user once.
+      let master = null;
+      try { master = sessionStorage.getItem("masterPassword"); } catch { }
+      if (!master && typeof window !== "undefined") {
+        master = window.prompt("Enter master password to decrypt your notes (leave empty to treat data as plaintext):") || null;
+        try { if (master) sessionStorage.setItem("masterPassword", master); } catch { }
+      }
+
+      // Decrypt fields if possible; gracefully fallback to plaintext when decryption fails
+      const processed = raw.map((n) => {
+        const title = decrypt(n.title, master) ?? n.title;
+        const content = decrypt(n.content, master) ?? n.content;
+        return { ...n, title, content };
+      });
+
+      writeNotesCache(selectedFolder, processed);
+      setNotes(processed);
     } catch { /* ignore */ }
   }, [user, selectedFolder, getNotesCacheKey, writeNotesCache]);
 

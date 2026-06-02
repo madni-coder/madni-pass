@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createNote, updateNote, uploadImage, deleteImage } from "@/lib/db";
+import { encrypt } from "@/lib/crypto";
 import { notify } from "@/lib/notify";
 import { FiSearch, FiX, FiChevronUp, FiChevronDown, FiImage, FiLoader, FiCheck, FiMoreHorizontal, FiHash, FiCopy, FiWifiOff } from "react-icons/fi";
 
@@ -128,7 +129,16 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
                     if (creatingRef.current) return; // prevent duplicate creation if previous create is still pending
                     creatingRef.current = true;
                     try {
-                        const id = await createNote(userId, folderId ?? null, title.trim(), content);
+                        // ensure content/title are encrypted client-side
+                        let master = null;
+                        try { master = sessionStorage.getItem("masterPassword"); } catch { }
+                        if (!master && typeof window !== "undefined") {
+                            master = window.prompt("Enter master password to encrypt this note:") || null;
+                            try { if (master) sessionStorage.setItem("masterPassword", master); } catch { }
+                        }
+                        const encTitle = encrypt(title.trim(), master);
+                        const encContent = encrypt(content, master);
+                        const id = await createNote(userId, folderId ?? null, encTitle, encContent);
                         noteIdRef.current = id;
                         setNoteCreated(true);
                         onSave({ id, title: title.trim(), content, images: [] });
@@ -136,7 +146,15 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
                         creatingRef.current = false;
                     }
                 } else {
-                    await updateNote(noteIdRef.current, title.trim(), content, imagesRef.current);
+                    let master = null;
+                    try { master = sessionStorage.getItem("masterPassword"); } catch { }
+                    if (!master && typeof window !== "undefined") {
+                        master = window.prompt("Enter master password to encrypt this note:") || null;
+                        try { if (master) sessionStorage.setItem("masterPassword", master); } catch { }
+                    }
+                    const encTitle = encrypt(title.trim(), master);
+                    const encContent = encrypt(content, master);
+                    await updateNote(noteIdRef.current, encTitle, encContent, imagesRef.current);
                     onSave({ id: noteIdRef.current, title: title.trim(), content, images: imagesRef.current });
                 }
                 setSaveStatus("saved");
@@ -159,7 +177,12 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
             const { url, path } = await uploadImage(userId, noteIdRef.current, file);
             const newImgs = [...imagesRef.current, { url, path, name: file.name }];
             setImages(newImgs);
-            await updateNote(noteIdRef.current, title, content, newImgs);
+            // update encrypted content on server
+            let master = null;
+            try { master = sessionStorage.getItem("masterPassword"); } catch { }
+            const encTitle = encrypt(title, master);
+            const encContent = encrypt(content, master);
+            await updateNote(noteIdRef.current, encTitle, encContent, newImgs);
             notify("Image attached!");
         } catch { notify("Failed to upload image", "error"); }
         finally { setUploading(false); e.target.value = ""; }
@@ -169,7 +192,13 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
         if (img.path) await deleteImage(img.path).catch(() => { });
         const newImgs = images.filter((_, i) => i !== idx);
         setImages(newImgs);
-        if (noteIdRef.current) await updateNote(noteIdRef.current, title, content, newImgs);
+        if (noteIdRef.current) {
+            let master = null;
+            try { master = sessionStorage.getItem("masterPassword"); } catch { }
+            const encTitle = encrypt(title, master);
+            const encContent = encrypt(content, master);
+            await updateNote(noteIdRef.current, encTitle, encContent, newImgs);
+        }
         notify("Image removed");
     };
 
