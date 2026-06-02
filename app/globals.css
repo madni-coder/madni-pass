@@ -178,6 +178,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -188,6 +189,7 @@
     opacity: 0;
     transform: scale(0.9) translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -199,6 +201,7 @@
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.85);
   }
+
   to {
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
@@ -225,10 +228,12 @@
     opacity: 0;
     transform: scale(0.6) rotate(-10deg);
   }
+
   50% {
     opacity: 1;
     transform: scale(1.1) rotate(3deg);
   }
+
   100% {
     transform: scale(1) rotate(0deg);
   }
@@ -239,6 +244,7 @@
     opacity: 0;
     letter-spacing: -0.2em;
   }
+
   100% {
     opacity: 1;
     letter-spacing: 0.1em;
@@ -250,6 +256,7 @@
   0% {
     width: 0%;
   }
+
   100% {
     width: 100%;
   }
@@ -259,6 +266,7 @@
   from {
     opacity: 1;
   }
+
   to {
     opacity: 0;
     visibility: hidden;
@@ -270,6 +278,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -277,10 +286,13 @@
 }
 
 @keyframes pulse-glow {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1) translate(0, 0);
     opacity: 0.4;
   }
+
   50% {
     transform: scale(1.1) translate(10px, -10px);
     opacity: 0.7;
@@ -318,7 +330,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background-image: 
+  background-image:
     radial-gradient(circle at center, rgba(187, 94, 58, 0.05) 0%, transparent 65%),
     radial-gradient(rgba(187, 94, 58, 0.08) 1px, transparent 1px);
   background-size: 100% 100%, 24px 24px;
@@ -326,7 +338,7 @@
 }
 
 .dark .bg-auth-pattern::before {
-  background-image: 
+  background-image:
     radial-gradient(circle at center, rgba(76, 201, 208, 0.04) 0%, transparent 70%),
     radial-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px);
   background-size: 100% 100%, 24px 24px;

@@ -111,7 +111,7 @@ export default function AuthPage() {
                             className="w-full h-full object-cover hidden dark:block"
                         />
                     </div>
-                    
+
                     <div className="flex flex-col items-center gap-2">
                         <h1 className="animate-intro-text text-3xl font-extrabold tracking-widest text-foreground">
                             Lazy <span className="text-primary">Notes</span>
@@ -141,7 +141,7 @@ export default function AuthPage() {
                     {theme === "dark" ? <FiSun size={18} className="text-yellow-400" /> : <FiMoon size={18} className="text-slate-700" />}
                 </button>
             )}
-            
+
             <div className="w-full max-w-md p-8 rounded-2xl border border-border/80 bg-card/75 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.4)] space-y-6 z-10 animate-card-enter">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-24 h-24 rounded-full overflow-hidden border border-border/40 shadow-md flex items-center justify-center hover:scale-105 transition-transform duration-300 bg-card">
@@ -230,9 +230,9 @@ export default function AuthPage() {
                     </div>
                 </div>
 
-                <Button 
-                    onClick={handleGoogle} 
-                    disabled={signingIn} 
+                <Button
+                    onClick={handleGoogle}
+                    disabled={signingIn}
                     className="w-full h-12 gap-3 text-sm font-semibold rounded-xl bg-background border border-border hover:bg-muted/80 shadow-sm active:scale-[0.98] transition-all duration-150 text-foreground"
                     variant="outline"
                 >
