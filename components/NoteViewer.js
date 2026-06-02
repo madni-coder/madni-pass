@@ -157,8 +157,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
                     if (creatingRef.current) return;
                     creatingRef.current = true;
                     try {
-                        let master = null;
-                        try { master = sessionStorage.getItem("masterPassword"); } catch { }
+                        const master = userId;
                         const encTitle = encrypt(title.trim(), master);
                         const encContent = encrypt(content, master);
                         const id = await createNote(userId, folderId ?? null, encTitle, encContent);
@@ -169,8 +168,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
                         creatingRef.current = false;
                     }
                 } else {
-                    let master = null;
-                    try { master = sessionStorage.getItem("masterPassword"); } catch { }
+                    const master = userId;
                     const encTitle = encrypt(title.trim(), master);
                     const encContent = encrypt(content, master);
                     await updateNote(noteIdRef.current, encTitle, encContent, imagesRef.current);
@@ -194,8 +192,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
         if (!noteIdRef.current) { notify("Pehle note ka title likho, phir image daalo", "error"); return; }
         setUploading(true);
         try {
-            let master = null;
-            try { master = sessionStorage.getItem("masterPassword"); } catch { }
+            const master = userId;
             const imgData = await storeImage(file, master);
             const newImgs = [...imagesRef.current, imgData];
             setImages(newImgs);
@@ -209,8 +206,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
     };
 
     const displayImages = useMemo(() => {
-        let master = null;
-        try { master = sessionStorage.getItem("masterPassword"); } catch { }
+        const master = userId;
         return images.map(img => ({ ...img, displaySrc: getImageSrc(img, master) }));
     }, [images]);
 
@@ -218,8 +214,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
         const newImgs = images.filter((_, i) => i !== idx);
         setImages(newImgs);
         if (noteIdRef.current) {
-            let master = null;
-            try { master = sessionStorage.getItem("masterPassword"); } catch { }
+            const master = userId;
             const encTitle = encrypt(title, master);
             const encContent = encrypt(content, master);
             await updateNote(noteIdRef.current, encTitle, encContent, newImgs);

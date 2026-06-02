@@ -89,10 +89,9 @@ export default function Home() {
         ? await getNotes(user.uid, selectedFolder.id)
         : await getAllNotes(user.uid);
 
-      // Try to get master password from sessionStorage. If not present,
-      // do NOT prompt the user; treat missing value as plaintext (null).
-      let master = null;
-      try { master = sessionStorage.getItem("masterPassword"); } catch { }
+      // Use the user's Firebase UID as the encryption key automatically
+      const master = user.uid;
+
 
       // Decrypt fields if possible; gracefully fallback to plaintext when decryption fails
       const processed = raw.map((n) => {

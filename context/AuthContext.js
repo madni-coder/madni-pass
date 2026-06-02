@@ -32,7 +32,7 @@ export function AuthProvider({ children }) {
             const lastEmail = (() => {
                 try { return localStorage.getItem("lastGoogleEmail"); } catch (e) { return null; }
             })();
- 
+
             if (selectAccount) {
                 provider.setCustomParameters({ prompt: "select_account" });
                 const result = await signInWithPopup(auth, provider);
@@ -40,7 +40,7 @@ export function AuthProvider({ children }) {
                 if (email) localStorage.setItem("lastGoogleEmail", email);
                 return result;
             }
- 
+
             if (lastEmail) {
                 provider.setCustomParameters({ login_hint: lastEmail, prompt: "none" });
                 try {
@@ -52,7 +52,7 @@ export function AuthProvider({ children }) {
                     // Silent sign-in failed. Fall through to popup below.
                 }
             }
- 
+
             provider.setCustomParameters({ login_hint: lastEmail || undefined });
             const result = await signInWithPopup(auth, provider);
             const email = result?.user?.email;
@@ -62,7 +62,7 @@ export function AuthProvider({ children }) {
             throw err;
         }
     };
-;
+    ;
 
     const signInWithGoogleSelectAccount = async () => {
         // Helper to let user pick a different Google account.
