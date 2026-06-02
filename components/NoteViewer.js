@@ -97,6 +97,34 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
         }
     }, []);
 
+    // Floating copy button state (shows next to a credential line on hover)
+    const [hoverCopy, setHoverCopy] = useState({ visible: false, top: 0, value: "", key: "" });
+
+    const handleMouseMoveOnTextarea = (e) => {
+        const ta = taRef.current;
+        if (!ta) return;
+        const rect = ta.getBoundingClientRect();
+        const lineHeight = parseFloat(sharedTextStyle.lineHeight) * parseFloat(sharedTextStyle.fontSize) || 23;
+        const paddingTop = 16; // from sharedTextStyle
+        // compute the line under the cursor
+        const y = e.clientY - rect.top + ta.scrollTop - paddingTop;
+        const lineIndex = Math.max(0, Math.floor(y / lineHeight));
+        const lines = content.split("\n");
+        const lineText = (lines[lineIndex] || "").trim();
+        const re = /^\s*(?:Email|Username|Password)\s*[:\-]?\s*(.+)$/i;
+        const m = re.exec(lineText);
+        if (m) {
+            // position the button near the right edge of the textarea, vertically aligned with the cursor line
+            const topClient = rect.top + paddingTop + (lineIndex * lineHeight) - ta.scrollTop + (lineHeight / 2);
+            const leftClient = rect.right - 56; // 56px from right edge to place button inside panel gutter
+            setHoverCopy({ visible: true, clientY: topClient, clientX: leftClient, value: m[1].trim(), key: (lineText.split(':')[0] || '').trim() });
+        } else {
+            setHoverCopy((s) => s.visible ? { ...s, visible: false } : s);
+        }
+    };
+
+    const handleMouseLeaveTextarea = () => setHoverCopy((s) => s.visible ? { ...s, visible: false } : s);
+
     const scrollToMatch = useCallback((idx) => {
         const ta = taRef.current;
         if (!ta || matches.length === 0) return;
@@ -220,6 +248,17 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
 
     const highlightedHtml = buildHighlightHtml(content, inSearch, matches, matchIdx);
 
+    const credentials = useMemo(() => {
+        if (!content) return [];
+        const creds = [];
+        const re = /^\s*(Email|Username|Password)\s*[:\-]?\s*(.+)$/gim;
+        let m;
+        while ((m = re.exec(content)) !== null) {
+            creds.push({ key: m[1], value: m[2].trim() });
+        }
+        return creds;
+    }, [content]);
+
     const handleSum = () => {
         const nums = [...content.matchAll(/\d+(?:\.\d+)?/g)].map((m) => parseFloat(m[0]));
         if (nums.length === 0) { setSumResult({ nums: [], total: 0 }); return; }
@@ -330,6 +369,24 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
                     </span>
                 </div>
 
+                {/* Floating copy button (appears next to credential lines) */}
+                {hoverCopy.visible && (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(hoverCopy.value).then(() => notify(`${hoverCopy.key || 'Value'} copied`)); }}
+                        style={{
+                            position: 'fixed',
+                            left: hoverCopy.clientX,
+                            top: hoverCopy.clientY - 12,
+                            zIndex: 1100,
+                            transform: 'translateY(-50%)',
+                        }}
+                        className="w-8 h-8 flex items-center justify-center rounded-md bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+                        title={`Copy ${hoverCopy.key || 'value'}`}
+                    >
+                        <FiCopy size={14} />
+                    </button>
+                )}
+
                 {/* Sum result banner */}
                 {sumResult && (
                     <div className="flex items-center justify-between gap-3 px-5 py-2.5 border-b border-primary/30 bg-primary/10">
@@ -355,7 +412,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
                     <FiSearch size={14} className="text-muted-foreground/60 shrink-0" />
                     <input
                         ref={srRef}
-                        placeholder="Search in note... (Cmd+F)"
+                        placeholder="Search in note......"
                         value={inSearch}
                         onChange={(e) => { setInSearch(e.target.value); setMatchIdx(0); }}
                         onKeyDown={(e) => {
@@ -411,7 +468,9 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
                         ref={taRef}
                         value={content}
                         onChange={(e) => { setContent(e.target.value); syncScroll(); }}
-                        onScroll={syncScroll}
+                        onScroll={(e) => { syncScroll(); /* update hover position on scroll */ setHoverCopy((s) => s.visible ? { ...s, visible: false } : s); }}
+                        onMouseMove={handleMouseMoveOnTextarea}
+                        onMouseLeave={handleMouseLeaveTextarea}
                         onKeyDown={(e) => {
                             if ((e.metaKey || e.ctrlKey) && e.key === "f") { e.preventDefault(); srRef.current?.focus(); }
                         }}
@@ -461,6 +520,8 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
                         )}
                     </div>
                 )}
+
+                {/* Bottom credential strip removed — inline floating copy remains */}
 
                 {/* Images row */}
                 {noteCreated && (

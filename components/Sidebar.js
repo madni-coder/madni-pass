@@ -15,18 +15,22 @@ import { FiFolder, FiPlus, FiMoreHorizontal, FiEdit2, FiTrash2, FiLock, FiMenu, 
 import { BiFolderOpen } from "react-icons/bi";
 import { FaPowerOff } from "react-icons/fa";
 import { createFolder, updateFolder, deleteFolder } from "@/lib/db";
+import { useAuth } from "@/context/AuthContext";
 import { notify } from "@/lib/notify";
 import { useTheme } from "next-themes";
 
-export default function Sidebar({ folders, setFolders, selectedFolder, onSelectFolder, userId, onLogout }) {
+export default function Sidebar({ folders, setFolders, selectedFolder, onSelectFolder, userId, onLogout, mobileOpen, setMobileOpen }) {
     const { theme, setTheme } = useTheme();
     const logoSrc = (theme === "light") ? "/lightLogo.png" : "/lazyNoteIcon.png";
+    const { user } = useAuth();
+    const rawFirst = user?.displayName ? user.displayName.split(" ")[0] : (user?.email ? user.email.split("@")[0] : "");
+    const firstName = rawFirst ? (rawFirst.charAt(0).toUpperCase() + rawFirst.slice(1)) : "";
     const [newFolderName, setNewFolderName] = useState("");
     const [showNewFolder, setShowNewFolder] = useState(false);
     const [renameTarget, setRenameTarget] = useState(null);
     const [renameName, setRenameName] = useState("");
     const [deleteTarget, setDeleteTarget] = useState(null);
-    const [mobileOpen, setMobileOpen] = useState(false);
+
     const [logoutConfirm, setLogoutConfirm] = useState(false);
 
     const handleCreate = async () => {
@@ -60,14 +64,17 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
     const SidebarContent = () => (
         <div className="flex flex-col h-full">
             <div className="px-4 py-5 border-b border-border">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                     <img
                         src={logoSrc}
                         alt="Lazy Notes"
-                        className="w-9 h-9 rounded-lg object-contain shrink-0"
+                        className="w-14 h-14 rounded-xl object-contain shrink-0"
                         onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/lazyNoteIcon.png'; }}
                     />
-                    <span className="font-bold text-foreground text-lg">Lazy <span className="text-primary">Notes</span></span>
+                    <div>
+                        <span className="font-bold text-foreground text-lg">Lazy <span className="text-primary">Notes</span></span>
+                        <p className="text-base text-foreground font-medium mt-1">{`Welcome${firstName ? ', ' + firstName : ''}`}</p>
+                    </div>
                 </div>
             </div>
 
@@ -188,24 +195,19 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
 
     return (
         <>
-            <button
-                onClick={() => setMobileOpen(true)}
-                className="lg:hidden fixed top-4 left-4 z-30 w-9 h-9 bg-card border border-border rounded-lg flex items-center justify-center text-muted-foreground"
-            >
-                <FiMenu size={20} />
-            </button>
+            <div className={`lg:hidden fixed inset-0 z-40 flex ${mobileOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+                <div
+                    className={`fixed inset-0 bg-black/60 transition-opacity duration-300 ${mobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+                    onClick={() => setMobileOpen(false)}
+                />
 
-            {mobileOpen && (
-                <div className="lg:hidden fixed inset-0 z-40 flex">
-                    <div className="fixed inset-0 bg-black/60" onClick={() => setMobileOpen(false)} />
-                    <div className="relative w-64 bg-card border-r border-border h-full flex flex-col z-50">
-                        <button onClick={() => setMobileOpen(false)} className="absolute top-4 right-3 text-muted-foreground hover:text-foreground">
-                            <FiX size={20} />
-                        </button>
-                        <SidebarContent />
-                    </div>
+                <div className={`relative w-64 bg-card border-r border-border h-full flex flex-col z-50 transform transition-transform duration-300 ${mobileOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none'}`}>
+                    <button onClick={() => setMobileOpen(false)} className="absolute top-4 right-3 text-muted-foreground hover:text-foreground">
+                        <FiX size={20} />
+                    </button>
+                    <SidebarContent />
                 </div>
-            )}
+            </div>
 
             <div className="hidden lg:flex flex-col w-64 bg-card border-r border-border h-screen shrink-0">
                 <SidebarContent />

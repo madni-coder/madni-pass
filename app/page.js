@@ -13,7 +13,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FiSearch, FiPlus, FiFileText, FiTrash2, FiLoader } from "react-icons/fi";
+import { FiSearch, FiPlus, FiFileText, FiTrash2, FiLoader, FiMenu } from "react-icons/fi";
+import { useTheme } from "next-themes";
 import { notify } from "@/lib/notify";
 
 export default function Home() {
@@ -30,6 +31,10 @@ export default function Home() {
   const [notepadOpen, setNotepadOpen] = useState(false);
   const [activeNote, setActiveNote] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const { theme } = useTheme();
+  const logoSrc = (theme === "light") ? "/lightLogo.png" : "/lazyNoteIcon.png";
 
   const getNotesCacheKey = useCallback(
     (folder) => (folder?.id ? `folder:${folder.id}` : "all"),
@@ -166,38 +171,76 @@ export default function Home() {
         <Sidebar folders={folders} setFolders={setFolders} selectedFolder={selectedFolder}
           userId={user.uid}
           onLogout={async () => { await logOut(); router.replace("/auth"); }}
-          onSelectFolder={(folder) => { setSelectedFolder(folder); setSearchQuery(""); }} />
+          onSelectFolder={(folder) => { setSelectedFolder(folder); setSearchQuery(""); }}
+          mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
 
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Top Bar */}
-          <div className="flex items-center gap-3 px-4 lg:px-6 py-4 border-b border-border bg-card/50">
-            <div className="w-9 lg:hidden shrink-0" />
-            <div className="relative flex-1 max-w-xl">
-              <FiSearch size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder='Search Anything'
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 bg-muted border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs">✕</button>
-              )}
+          <div className="flex items-center justify-between gap-4 px-4 lg:px-8 py-5 lg:py-6 border-b border-border bg-card/50">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              {/* Mobile: icons-only (menu handled by Sidebar) and search toggle */}
+              <div className="lg:hidden flex items-center gap-3 flex-1">
+                <button
+                  onClick={() => setMobileOpen(true)}
+                  aria-label="Open menu"
+                  className="w-12 h-12 flex items-center justify-center rounded-full bg-transparent text-foreground hover:bg-muted transition-colors"
+                >
+                  <FiMenu size={20} />
+                </button>
+
+                <div className="relative flex-1">
+                  <FiSearch size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder='Search Anything'
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-12 pr-12 h-12 rounded-full bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                  />
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs">✕</button>
+                  )}
+                </div>
+
+                <button onClick={() => handleNewNote(selectedFolder?.id ?? null)} className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-md">
+                  <FiPlus size={18} />
+                </button>
+              </div>
+
+              {/* Desktop / larger: central search (or when mobileSearchOpen true) */}
+              <div className={`relative flex-1 ${mobileSearchOpen ? '' : 'hidden lg:block'}`}>
+                <FiSearch size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder='Search Anything'
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-12 h-12 rounded-full bg-muted border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs">✕</button>
+                )}
+              </div>
             </div>
-            <Button onClick={() => handleNewNote(selectedFolder?.id ?? null)} className="bg-primary hover:bg-primary/90 text-primary-foreground shrink-0">
-              <FiPlus size={16} className="mr-1.5" />
-              <span className="hidden sm:inline">{selectedFolder ? `Add Note` : "New Note"}</span>
-              <span className="sm:hidden">New</span>
-            </Button>
+
+            <div className={mobileSearchOpen ? 'hidden' : 'hidden lg:flex items-center gap-4'}>
+              {/* Desktop labeled button: hidden on small screens */}
+              <div className="hidden sm:flex">
+                <Button onClick={() => handleNewNote(selectedFolder?.id ?? null)} className="h-12 px-4 bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 flex items-center gap-2">
+                  <FiPlus size={16} />
+                  <span className="ml-2">{selectedFolder ? `Add Note` : "New Note"}</span>
+                </Button>
+              </div>
+
+              {/* app name removed from right side on desktop */}
+            </div>
           </div>
 
           {/* Notes area */}
           <div className="flex-1 overflow-y-auto p-4 lg:p-6">
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-foreground">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-foreground flex-1 truncate mr-4">
                 {searchQuery ? `Search: "${searchQuery}"` : selectedFolder ? selectedFolder.name : "All Notes"}
               </h2>
-              <p className="text-sm text-foreground">{filteredNotes.length} note{filteredNotes.length !== 1 ? "s" : ""}{searchQuery && " found"}</p>
+              <p className="text-sm text-muted-foreground shrink-0">{filteredNotes.length} note{filteredNotes.length !== 1 ? "s" : ""}{searchQuery && " found"}</p>
             </div>
 
             {filteredNotes.length === 0 && (
@@ -216,12 +259,11 @@ export default function Home() {
             )}
 
             {filteredNotes.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredNotes.map((note) => (
                   <NoteCard
                     key={note.id}
                     note={note}
-                    folderName={!selectedFolder ? getFolderName(note.folderId) : null}
                     searchQuery={searchQuery}
                     onClick={() => handleOpenNote(note)}
                     onDelete={(e) => { e.stopPropagation(); setDeleteTarget(note); }}
@@ -280,8 +322,10 @@ function highlight(text, query) {
 }
 
 function NoteCard({ note, folderName, searchQuery, onClick, onDelete }) {
+  const { theme } = useTheme();
   const snippet = (note.content || "").slice(0, 120) + ((note.content || "").length > 120 ? "..." : "");
   const date = formatDate(note.updatedAt || note.createdAt);
+  const displayDate = date || formatDate(new Date());
   return (
     <div
       onClick={onClick}
@@ -307,19 +351,23 @@ function NoteCard({ note, folderName, searchQuery, onClick, onDelete }) {
         )}
       </div>
 
+      {/* Theme-aware bold divider between content and footer */}
+      <div className={`w-full ${theme === 'light' ? 'bg-primary' : 'bg-primary/70'} h-px`} />
+
       {/* Footer */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-t border-border/30 bg-muted/20">
-        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-          {date && (
-            <span className="text-[10px] text-foreground font-medium tracking-wide shrink-0">{date}</span>
-          )}
+      <div className="flex items-center justify-between px-4 py-1.5 bg-muted/100">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-[11px] text-foreground font-medium tracking-wide shrink-0">{displayDate}</span>
           {folderName && (
-            <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary/70 border border-primary/20 px-1.5 py-0 h-4 font-medium">
+            <Badge variant="secondary" className="text-[12px] bg-primary/10 text-primary/70 border border-primary/20 px-3 py-0 h-6 font-medium truncate flex-1">
               {folderName}
             </Badge>
           )}
           {note.images?.length > 0 && (
-            <span className="text-[10px] text-foreground">📎 {note.images.length}</span>
+            <span className="text-[11px] text-foreground flex items-center gap-1 shrink-0">
+              <span aria-hidden>📎</span>
+              <span className="text-[10px]">{note.images.length}</span>
+            </span>
           )}
         </div>
         <button
