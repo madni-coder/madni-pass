@@ -14,14 +14,14 @@ import {
 import { FiFolder, FiPlus, FiMoreHorizontal, FiEdit2, FiTrash2, FiLock, FiUnlock, FiMenu, FiX, FiSun, FiMoon } from "react-icons/fi";
 import { BiFolderOpen } from "react-icons/bi";
 import { FaPowerOff } from "react-icons/fa";
-import { createFolder, updateFolder, deleteFolder, updateFolderPin } from "@/lib/db";
+import { createFolder, updateFolder, deleteFolder, updateFolderPin, setUserPinHash } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { notify } from "@/lib/notify";
 import { useTheme } from "next-themes";
 import PinLockScreen from "./PinLockScreen";
 import CryptoJS from "crypto-js";
 
-export default function Sidebar({ folders, setFolders, selectedFolder, onSelectFolder, userId, onLogout, mobileOpen, setMobileOpen, viewingBin, onSelectBin, unlockedFolders = [], onUnlockFolder }) {
+export default function Sidebar({ folders, setFolders, selectedFolder, onSelectFolder, userId, onLogout, mobileOpen, setMobileOpen, viewingBin, onSelectBin, unlockedFolders = [], onUnlockFolder, globalPinHash, setGlobalPinHash }) {
     const { theme, setTheme } = useTheme();
     const logoSrc = (theme === "light") ? "/lightLogo.png" : "/lazyNoteIcon.png";
     const { user } = useAuth();
@@ -34,6 +34,23 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
     const [logoutConfirm, setLogoutConfirm] = useState(false);
     const [pinAction, setPinAction] = useState(null); // null | { folder, mode: 'set' | 'remove' | 'verify' }
     const [pendingAction, setPendingAction] = useState(null); // null | { folder, type: 'rename' | 'delete' }
+
+    const handleLockFolderClick = async (folder) => {
+        if (globalPinHash) {
+            try {
+                await updateFolderPin(folder.id, true);
+                setFolders(prev => prev.map(f => f.id === folder.id ? { ...f, pinHash: true } : f));
+                if (selectedFolder?.id === folder.id) {
+                    onSelectFolder({ ...selectedFolder, pinHash: true });
+                }
+                notify("Folder locked using your global PIN!");
+            } catch (err) {
+                notify("Failed to lock folder: " + err.message, "error");
+            }
+        } else {
+            setPinAction({ folder, mode: "set" });
+        }
+    };
 
     const handleRenameClick = (folder) => {
         const isLocked = folder.pinHash && !unlockedFolders.includes(folder.id);
@@ -172,7 +189,7 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                                     ) : (
                                         <DropdownMenuItem
                                             className="text-foreground hover:text-foreground focus:text-foreground hover:bg-muted focus:bg-muted cursor-pointer"
-                                            onClick={() => { setPinAction({ folder, mode: "set" }); }}
+                                            onClick={() => handleLockFolderClick(folder)}
                                         >
                                             <FiLock size={14} className="mr-2" /> Lock Folder
                                         </DropdownMenuItem>
@@ -316,17 +333,19 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                     mode={pinAction.mode === "set" ? "set" : "unlock"}
                     title={pinAction.mode === "set" ? "Lock Folder" : pinAction.mode === "remove" ? "Remove Folder Lock" : "Unlock Folder"}
                     description={pinAction.mode === "set" ? `Set a 4-digit PIN to lock folder "${pinAction.folder.name}".` : `Enter the 4-digit PIN for folder "${pinAction.folder.name}".`}
-                    correctPinHash={pinAction.folder.pinHash}
+                    correctPinHash={globalPinHash}
                     onSuccess={async (pin) => {
                         const pinHash = CryptoJS.SHA256(pin).toString();
                         try {
                             if (pinAction.mode === "set") {
-                                await updateFolderPin(pinAction.folder.id, pinHash);
-                                setFolders(prev => prev.map(f => f.id === pinAction.folder.id ? { ...f, pinHash } : f));
+                                await setUserPinHash(userId, pinHash);
+                                setGlobalPinHash(pinHash);
+                                await updateFolderPin(pinAction.folder.id, true);
+                                setFolders(prev => prev.map(f => f.id === pinAction.folder.id ? { ...f, pinHash: true } : f));
                                 if (selectedFolder?.id === pinAction.folder.id) {
-                                    onSelectFolder({ ...selectedFolder, pinHash });
+                                    onSelectFolder({ ...selectedFolder, pinHash: true });
                                 }
-                                notify("Folder locked successfully!");
+                                notify("Global PIN set and folder locked!");
                             } else if (pinAction.mode === "remove") {
                                 await updateFolderPin(pinAction.folder.id, null);
                                 setFolders(prev => prev.map(f => f.id === pinAction.folder.id ? { ...f, pinHash: null } : f));

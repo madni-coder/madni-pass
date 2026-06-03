@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { getFolders, getAllNotes, getNotes, deleteNote, deleteNotePermanently, restoreNote, clearBin } from "@/lib/db";
+import { getFolders, getAllNotes, getNotes, deleteNote, deleteNotePermanently, restoreNote, clearBin, getUserPinHash } from "@/lib/db";
 import { decrypt } from "@/lib/crypto";
 import Sidebar from "@/components/Sidebar";
 import NoteViewer from "@/components/NoteViewer";
@@ -30,6 +30,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [unlockedFolders, setUnlockedFolders] = useState([]);
+  const [globalPinHash, setGlobalPinHash] = useState(null);
 
   const handleUnlockFolder = (folderId) => {
     setUnlockedFolders((prev) => [...prev, folderId]);
@@ -38,6 +39,11 @@ export default function Home() {
   useEffect(() => {
     setUnlockedFolders([]);
   }, [selectedFolder?.id]);
+
+  useEffect(() => {
+    if (!user) return;
+    getUserPinHash(user.uid).then(setGlobalPinHash).catch(() => {});
+  }, [user]);
 
   const [notepadOpen, setNotepadOpen] = useState(false);
   const [activeNote, setActiveNote] = useState(null);
@@ -128,6 +134,7 @@ export default function Home() {
     ? notes.filter((n) => n.inBin)
     : notes.filter((n) => !n.inBin)
   ).filter((n) => {
+    if (n.isPinConfig) return false;
     if (!n.folderId) return true;
     const folder = folders.find((f) => f.id === n.folderId);
     if (!folder) return true;
@@ -263,7 +270,9 @@ export default function Home() {
           viewingBin={viewingBin}
           onSelectBin={() => { setViewingBin(true); setSelectedFolder(null); setSearchQuery(""); }}
           unlockedFolders={unlockedFolders}
-          onUnlockFolder={handleUnlockFolder} />
+          onUnlockFolder={handleUnlockFolder}
+          globalPinHash={globalPinHash}
+          setGlobalPinHash={setGlobalPinHash} />
 
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Top Bar */}
@@ -346,7 +355,7 @@ export default function Home() {
                 mode="unlock"
                 title={`"${selectedFolder.name}" is Locked`}
                 description="Enter the 4-digit PIN to access this folder."
-                correctPinHash={selectedFolder.pinHash}
+                correctPinHash={globalPinHash}
                 onSuccess={() => handleUnlockFolder(selectedFolder.id)}
                 onCancel={() => setSelectedFolder(null)}
               />
@@ -406,6 +415,8 @@ export default function Home() {
           onClose={() => { setNotepadOpen(false); loadNotes(); }}
           onDelete={handleDeleteNote}
           onRestore={handleRestoreNote}
+          globalPinHash={globalPinHash}
+          setGlobalPinHash={setGlobalPinHash}
         />
       )}
     </>

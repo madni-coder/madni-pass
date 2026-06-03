@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { createNote, updateNote, updateNotePin } from "@/lib/db";
+import { createNote, updateNote, updateNotePin, setUserPinHash } from "@/lib/db";
 import { storeImage, getImageSrc } from "@/lib/imageStore";
 import { encrypt } from "@/lib/crypto";
 import { notify } from "@/lib/notify";
@@ -163,7 +163,7 @@ function buildHighlightHtml(text, query, matches, activeIdx) {
     return result;
 }
 
-export default function NoteViewer({ note, folderId, onSave, onClose, userId, onDelete, onRestore }) {
+export default function NoteViewer({ note, folderId, onSave, onClose, userId, onDelete, onRestore, globalPinHash, setGlobalPinHash }) {
     const isNew = !note?.id;
     const [title, setTitle] = useState(note?.title || "");
     const [content, setContent] = useState(note?.content || "");
@@ -409,6 +409,29 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, on
         setMenuOpen(false);
     };
 
+    const handleLockNoteClick = async () => {
+        setMenuOpen(false);
+        if (!noteIdRef.current) return;
+        if (globalPinHash) {
+            try {
+                await updateNotePin(noteIdRef.current, true);
+                setNotePinHash(true);
+                onSave({
+                    id: noteIdRef.current,
+                    title,
+                    content,
+                    images,
+                    pinHash: true
+                });
+                notify("Note locked using your global PIN!");
+            } catch (err) {
+                notify("Failed to lock note: " + err.message, "error");
+            }
+        } else {
+            setPinAction("set");
+        }
+    };
+
     const isDesktop = typeof window !== "undefined" && window.innerWidth >= 640;
     const panelStyle = isDesktop
         ? {
@@ -449,7 +472,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, on
                 mode="unlock"
                 title="Locked Note"
                 description="Enter the 4-digit PIN to view note content."
-                correctPinHash={notePinHash}
+                correctPinHash={globalPinHash}
                 onSuccess={() => {
                     setIsUnlocked(true);
                 }}
@@ -548,7 +571,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, on
                                     ) : (
                                         <button 
                                             disabled={!noteIdRef.current}
-                                            onClick={() => { setPinAction("set"); setMenuOpen(false); }}
+                                            onClick={handleLockNoteClick}
                                             className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-foreground hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-colors"
                                             title={!noteIdRef.current ? "Save note first to lock" : "Lock this note"}
                                         >
@@ -829,16 +852,18 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, on
                         const hash = CryptoJS.SHA256(pin).toString();
                         try {
                             if (noteIdRef.current) {
-                                await updateNotePin(noteIdRef.current, hash);
-                                setNotePinHash(hash);
+                                await setUserPinHash(userId, hash);
+                                setGlobalPinHash(hash);
+                                await updateNotePin(noteIdRef.current, true);
+                                setNotePinHash(true);
                                 onSave({
                                     id: noteIdRef.current,
                                     title,
                                     content,
                                     images,
-                                    pinHash: hash
+                                    pinHash: true
                                 });
-                                notify("Note locked successfully!");
+                                notify("Global PIN set and note locked!");
                             }
                         } catch (err) {
                             notify("Failed to lock note: " + err.message, "error");
@@ -854,7 +879,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, on
                     mode="unlock"
                     title="Remove Note Lock"
                     description="Enter your 4-digit PIN to remove lock."
-                    correctPinHash={notePinHash}
+                    correctPinHash={globalPinHash}
                     onSuccess={async () => {
                         try {
                             if (noteIdRef.current) {
