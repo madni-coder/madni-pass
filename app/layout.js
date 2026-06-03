@@ -11,6 +11,10 @@ const firaCode = Fira_Code({ subsets: ["latin"], variable: "--font-mono" });
 export const metadata = {
   title: "Madni Notes",
   description: "Apne credentials notes mein rakho",
+  icons: {
+    icon: "/lazyNoteIcon.png",
+    apple: "/lazyNoteIcon.png",
+  },
 };
 
 export default function RootLayout({ children }) {

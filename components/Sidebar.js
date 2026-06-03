@@ -76,7 +76,7 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                     />
                     <div>
                         <span className="font-bold text-foreground text-lg">Lazy <span className="text-primary">Notes</span></span>
-                        <p className="text-base text-foreground font-medium mt-1">{`Welcome${firstName ? ', ' + firstName : ''}`}</p>
+                        <p className="text-base text-foreground font-medium mt-1">{`Hello${firstName ? ' ! ' + firstName : ''}`}</p>
                     </div>
                 </div>
             </div>
