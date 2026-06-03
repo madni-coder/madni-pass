@@ -1,10 +1,12 @@
 "use client";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { createNote, updateNote } from "@/lib/db";
+import { createNote, updateNote, updateNotePin } from "@/lib/db";
 import { storeImage, getImageSrc } from "@/lib/imageStore";
 import { encrypt } from "@/lib/crypto";
 import { notify } from "@/lib/notify";
-import { FiSearch, FiX, FiChevronUp, FiChevronDown, FiImage, FiLoader, FiCheck, FiMoreHorizontal, FiHash, FiCopy, FiWifiOff, FiArrowLeft, FiTrash2, FiRotateCcw } from "react-icons/fi";
+import { FiSearch, FiX, FiChevronUp, FiChevronDown, FiImage, FiLoader, FiCheck, FiMoreHorizontal, FiHash, FiCopy, FiWifiOff, FiArrowLeft, FiTrash2, FiRotateCcw, FiLock, FiUnlock } from "react-icons/fi";
+import PinLockScreen from "./PinLockScreen";
+import CryptoJS from "crypto-js";
 
 function escHtml(str) {
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -166,6 +168,21 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, on
     const [title, setTitle] = useState(note?.title || "");
     const [content, setContent] = useState(note?.content || "");
     const [images, setImages] = useState(note?.images || []);
+    const [notePinHash, setNotePinHash] = useState(note?.pinHash || null);
+    const [isUnlocked, setIsUnlocked] = useState(!note?.pinHash);
+    const [pinAction, setPinAction] = useState(null); // null | 'set' | 'remove'
+
+    const prevNoteIdRef = useRef(note?.id || null);
+
+    useEffect(() => {
+        if (note?.id !== prevNoteIdRef.current) {
+            prevNoteIdRef.current = note?.id || null;
+            setNotePinHash(note?.pinHash || null);
+            setIsUnlocked(!note?.pinHash);
+        } else {
+            setNotePinHash(note?.pinHash || null);
+        }
+    }, [note]);
     const [uploading, setUploading] = useState(false);
     const [saveStatus, setSaveStatus] = useState("idle"); // "idle" | "saved"
     const [noteCreated, setNoteCreated] = useState(!!note?.id); // for showing images row
@@ -281,7 +298,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, on
                         const id = await createNote(userId, folderId ?? null, encTitle, encContent);
                         noteIdRef.current = id;
                         setNoteCreated(true);
-                        onSave({ id, title: title.trim(), content, images: [] });
+                        onSave({ id, title: title.trim(), content, images: [], pinHash: notePinHash });
                     } finally {
                         creatingRef.current = false;
                     }
@@ -290,7 +307,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, on
                     const encTitle = encrypt(title.trim(), master);
                     const encContent = encrypt(content, master);
                     await updateNote(noteIdRef.current, encTitle, encContent, imagesRef.current);
-                    onSave({ id: noteIdRef.current, title: title.trim(), content, images: imagesRef.current });
+                    onSave({ id: noteIdRef.current, title: title.trim(), content, images: imagesRef.current, pinHash: notePinHash });
                 }
                 setSaveStatus("saved");
                 setTimeout(() => setSaveStatus("idle"), 2000);
@@ -317,7 +334,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, on
             const encTitle = encrypt(title, master);
             const encContent = encrypt(content, master);
             await updateNote(noteIdRef.current, encTitle, encContent, newImgs);
-            onSave({ id: noteIdRef.current, title, content, images: newImgs });
+            onSave({ id: noteIdRef.current, title, content, images: newImgs, pinHash: notePinHash });
             notify("Image attached!");
         } catch (err) { notify("Failed to upload image: " + (err?.message || err), "error"); }
         finally { setUploading(false); e.target.value = ""; }
@@ -336,7 +353,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, on
             const encTitle = encrypt(title, master);
             const encContent = encrypt(content, master);
             await updateNote(noteIdRef.current, encTitle, encContent, newImgs);
-            onSave({ id: noteIdRef.current, title, content, images: newImgs });
+            onSave({ id: noteIdRef.current, title, content, images: newImgs, pinHash: notePinHash });
         }
         notify("Image removed");
     };
@@ -426,6 +443,21 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, on
             color: "var(--foreground)",
         };
 
+    if (!isUnlocked && notePinHash) {
+        return (
+            <PinLockScreen
+                mode="unlock"
+                title="Locked Note"
+                description="Enter the 4-digit PIN to view note content."
+                correctPinHash={notePinHash}
+                onSuccess={() => {
+                    setIsUnlocked(true);
+                }}
+                onCancel={onClose}
+            />
+        );
+    }
+
     return (
         <>
             <style>{`[data-bd-scroll]::-webkit-scrollbar{display:none}`}</style>
@@ -505,6 +537,24 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, on
                                     >
                                         <span className="text-muted-foreground"><FiCopy size={13} /></span>Copy Note
                                     </button>
+                                    <div style={{ height: 1, background: "var(--border)", margin: "3px 0" }} />
+                                    {notePinHash ? (
+                                        <button 
+                                            onClick={() => { setPinAction("remove"); setMenuOpen(false); }}
+                                            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-foreground hover:bg-muted transition-colors"
+                                        >
+                                            <span className="text-muted-foreground"><FiUnlock size={13} /></span>Remove Lock
+                                        </button>
+                                    ) : (
+                                        <button 
+                                            disabled={!noteIdRef.current}
+                                            onClick={() => { setPinAction("set"); setMenuOpen(false); }}
+                                            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-foreground hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                                            title={!noteIdRef.current ? "Save note first to lock" : "Lock this note"}
+                                        >
+                                            <span className="text-muted-foreground"><FiLock size={13} /></span>Lock Note
+                                        </button>
+                                    )}
                                     <div style={{ height: 1, background: "var(--border)", margin: "3px 0" }} />
                                     {note?.inBin ? (
                                         <>
@@ -769,6 +819,64 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, on
                     </div>
                 )}
             </div>
+
+            {pinAction === "set" && (
+                <PinLockScreen
+                    mode="set"
+                    title="Lock Note"
+                    description="Set a 4-digit PIN to lock this note."
+                    onSuccess={async (pin) => {
+                        const hash = CryptoJS.SHA256(pin).toString();
+                        try {
+                            if (noteIdRef.current) {
+                                await updateNotePin(noteIdRef.current, hash);
+                                setNotePinHash(hash);
+                                onSave({
+                                    id: noteIdRef.current,
+                                    title,
+                                    content,
+                                    images,
+                                    pinHash: hash
+                                });
+                                notify("Note locked successfully!");
+                            }
+                        } catch (err) {
+                            notify("Failed to lock note: " + err.message, "error");
+                        }
+                        setPinAction(null);
+                    }}
+                    onCancel={() => setPinAction(null)}
+                />
+            )}
+
+            {pinAction === "remove" && (
+                <PinLockScreen
+                    mode="unlock"
+                    title="Remove Note Lock"
+                    description="Enter your 4-digit PIN to remove lock."
+                    correctPinHash={notePinHash}
+                    onSuccess={async () => {
+                        try {
+                            if (noteIdRef.current) {
+                                await updateNotePin(noteIdRef.current, null);
+                                setNotePinHash(null);
+                                onSave({
+                                    id: noteIdRef.current,
+                                    title,
+                                    content,
+                                    images,
+                                    pinHash: null
+                                });
+                                notify("Note lock removed!");
+                            }
+                        } catch (err) {
+                            notify("Failed to remove lock: " + err.message, "error");
+                        }
+                        setPinAction(null);
+                    }}
+                    onCancel={() => setPinAction(null)}
+                />
+            )}
         </>
     );
 }

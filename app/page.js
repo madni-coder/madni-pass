@@ -13,9 +13,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FiSearch, FiPlus, FiFileText, FiTrash2, FiLoader, FiMenu, FiRotateCcw } from "react-icons/fi";
+import { FiSearch, FiPlus, FiFileText, FiTrash2, FiLoader, FiMenu, FiRotateCcw, FiLock } from "react-icons/fi";
 import { useTheme } from "next-themes";
 import { notify } from "@/lib/notify";
+import PinLockScreen from "@/components/PinLockScreen";
 
 export default function Home() {
   const { user, loading: authLoading, logOut } = useAuth();
@@ -28,6 +29,15 @@ export default function Home() {
   const [viewingBin, setViewingBin] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [unlockedFolders, setUnlockedFolders] = useState([]);
+
+  const handleUnlockFolder = (folderId) => {
+    setUnlockedFolders((prev) => [...prev, folderId]);
+  };
+
+  useEffect(() => {
+    setUnlockedFolders([]);
+  }, [selectedFolder?.id]);
 
   const [notepadOpen, setNotepadOpen] = useState(false);
   const [activeNote, setActiveNote] = useState(null);
@@ -114,14 +124,25 @@ export default function Home() {
     return () => { try { window.removeEventListener("masterPasswordSet", handler); } catch { } };
   }, [loadNotes]);
 
-  const displayNotes = viewingBin
+  const displayNotes = (viewingBin
     ? notes.filter((n) => n.inBin)
-    : notes.filter((n) => !n.inBin);
+    : notes.filter((n) => !n.inBin)
+  ).filter((n) => {
+    if (!n.folderId) return true;
+    const folder = folders.find((f) => f.id === n.folderId);
+    if (!folder) return true;
+    if (folder.pinHash && !unlockedFolders.includes(folder.id)) {
+      return selectedFolder?.id === folder.id;
+    }
+    return true;
+  });
 
   const filteredNotes = searchQuery
     ? displayNotes.filter((n) => {
       const q = searchQuery.toLowerCase();
-      return n.title.toLowerCase().includes(q) || (n.content || "").toLowerCase().includes(q);
+      const matchesTitle = n.title.toLowerCase().includes(q);
+      const matchesContent = !n.pinHash && (n.content || "").toLowerCase().includes(q);
+      return matchesTitle || matchesContent;
     })
     : displayNotes;
 
@@ -240,7 +261,9 @@ export default function Home() {
           onSelectFolder={(folder) => { setSelectedFolder(folder); setViewingBin(false); setSearchQuery(""); }}
           mobileOpen={mobileOpen} setMobileOpen={setMobileOpen}
           viewingBin={viewingBin}
-          onSelectBin={() => { setViewingBin(true); setSelectedFolder(null); setSearchQuery(""); }} />
+          onSelectBin={() => { setViewingBin(true); setSelectedFolder(null); setSearchQuery(""); }}
+          unlockedFolders={unlockedFolders}
+          onUnlockFolder={handleUnlockFolder} />
 
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Top Bar */}
@@ -317,44 +340,58 @@ export default function Home() {
 
           {/* Notes area */}
           <div className="flex-1 overflow-y-auto p-4 lg:p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground flex-1 truncate mr-4">
-                {searchQuery ? `Search: "${searchQuery}"` : viewingBin ? "Bin" : selectedFolder ? selectedFolder.name : "All Notes"}
-              </h2>
-              <p className="text-sm text-muted-foreground shrink-0">{filteredNotes.length} note{filteredNotes.length !== 1 ? "s" : ""}{searchQuery && " found"}</p>
-            </div>
-
-            {filteredNotes.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
-                  <FiFileText size={32} className="text-muted-foreground/50" />
+            {selectedFolder && selectedFolder.pinHash && !unlockedFolders.includes(selectedFolder.id) ? (
+              <PinLockScreen
+                inline
+                mode="unlock"
+                title={`"${selectedFolder.name}" is Locked`}
+                description="Enter the 4-digit PIN to access this folder."
+                correctPinHash={selectedFolder.pinHash}
+                onSuccess={() => handleUnlockFolder(selectedFolder.id)}
+                onCancel={() => setSelectedFolder(null)}
+              />
+            ) : (
+              <>
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-foreground flex-1 truncate mr-4">
+                    {searchQuery ? `Search: "${searchQuery}"` : viewingBin ? "Bin" : selectedFolder ? selectedFolder.name : "All Notes"}
+                  </h2>
+                  <p className="text-sm text-muted-foreground shrink-0">{filteredNotes.length} note{filteredNotes.length !== 1 ? "s" : ""}{searchQuery && " found"}</p>
                 </div>
-                {searchQuery ? (
-                  <><p className="text-muted-foreground font-medium">No results found</p><p className="text-muted-foreground/60 text-sm mt-1">Nothing matched "{searchQuery}"</p></>
-                ) : viewingBin ? (
-                  <><p className="text-muted-foreground font-medium">Bin is empty</p><p className="text-muted-foreground/60 text-sm mt-1">Deleted notes will appear here</p></>
-                ) : selectedFolder ? (
-                  <><p className="text-muted-foreground font-medium">No notes in this folder</p><p className="text-muted-foreground/60 text-sm mt-1">Create a new note to get started</p></>
-                ) : (
-                  <><p className="text-muted-foreground font-medium">No notes yet</p><p className="text-muted-foreground/60 text-sm mt-1">Create a folder in the sidebar, then add a note</p></>
-                )}
-              </div>
-            )}
 
-            {filteredNotes.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {filteredNotes.map((note) => (
-                  <NoteCard
-                    key={note.id}
-                    note={note}
-                    searchQuery={searchQuery}
-                    onClick={() => handleOpenNote(note)}
-                    onDelete={handleDeleteNote}
-                    onRestore={handleRestoreNote}
-                    inBin={viewingBin || note.inBin}
-                  />
-                ))}
-              </div>
+                {filteredNotes.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
+                      <FiFileText size={32} className="text-muted-foreground/50" />
+                    </div>
+                    {searchQuery ? (
+                      <><p className="text-muted-foreground font-medium">No results found</p><p className="text-muted-foreground/60 text-sm mt-1">Nothing matched "{searchQuery}"</p></>
+                    ) : viewingBin ? (
+                      <><p className="text-muted-foreground font-medium">Bin is empty</p><p className="text-muted-foreground/60 text-sm mt-1">Deleted notes will appear here</p></>
+                    ) : selectedFolder ? (
+                      <><p className="text-muted-foreground font-medium">No notes in this folder</p><p className="text-muted-foreground/60 text-sm mt-1">Create a new note to get started</p></>
+                    ) : (
+                      <><p className="text-muted-foreground font-medium">No notes yet</p><p className="text-muted-foreground/60 text-sm mt-1">Create a folder in the sidebar, then add a note</p></>
+                    )}
+                  </div>
+                )}
+
+                {filteredNotes.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {filteredNotes.map((note) => (
+                      <NoteCard
+                        key={note.id}
+                        note={note}
+                        searchQuery={searchQuery}
+                        onClick={() => handleOpenNote(note)}
+                        onDelete={handleDeleteNote}
+                        onRestore={handleRestoreNote}
+                        inBin={viewingBin || note.inBin}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -397,7 +434,8 @@ function highlight(text, query) {
 
 function NoteCard({ note, folderName, searchQuery, onClick, onDelete, onRestore, inBin }) {
   const { theme } = useTheme();
-  const snippet = (note.content || "").slice(0, 120) + ((note.content || "").length > 120 ? "..." : "");
+  const isLocked = !!note.pinHash;
+  const snippet = isLocked ? "Locked" : (note.content || "").slice(0, 120) + ((note.content || "").length > 120 ? "..." : "");
   const date = formatDate(note.updatedAt || note.createdAt);
   const displayDate = date || formatDate(new Date());
   return (
@@ -411,12 +449,18 @@ function NoteCard({ note, folderName, searchQuery, onClick, onDelete, onRestore,
       {/* Card body */}
       <div className="flex flex-col gap-2 p-4 flex-1">
         {/* Title */}
-        <h3 className="font-semibold text-foreground text-sm leading-snug line-clamp-2 tracking-tight">
+        <h3 className="font-semibold text-foreground text-sm leading-snug line-clamp-2 tracking-tight flex items-center gap-1.5">
+          {isLocked && <FiLock className="text-primary shrink-0 animate-pulse" size={13} />}
           {highlight(note.title, searchQuery)}
         </h3>
 
         {/* Content preview */}
-        {snippet ? (
+        {isLocked ? (
+          <p className="text-[11px] text-muted-foreground italic flex-1 flex items-center gap-1">
+            <FiLock size={12} className="text-muted-foreground/60 shrink-0" />
+            Note content is locked.
+          </p>
+        ) : snippet ? (
           <p className="text-[11px] text-foreground leading-relaxed line-clamp-3 whitespace-pre-wrap flex-1">
             {highlight(snippet, searchQuery)}
           </p>
