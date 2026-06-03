@@ -19,7 +19,7 @@ import { useAuth } from "@/context/AuthContext";
 import { notify } from "@/lib/notify";
 import { useTheme } from "next-themes";
 
-export default function Sidebar({ folders, setFolders, selectedFolder, onSelectFolder, userId, onLogout, mobileOpen, setMobileOpen }) {
+export default function Sidebar({ folders, setFolders, selectedFolder, onSelectFolder, userId, onLogout, mobileOpen, setMobileOpen, viewingBin, onSelectBin }) {
     const { theme, setTheme } = useTheme();
     const logoSrc = (theme === "light") ? "/lightLogo.png" : "/lazyNoteIcon.png";
     const { user } = useAuth();
@@ -94,7 +94,7 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
             <ScrollArea className="flex-1 px-2">
                 <button
                     onClick={() => { onSelectFolder(null); setMobileOpen(false); }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors mb-1 ${!selectedFolder ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted"
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors mb-1 ${!selectedFolder && !viewingBin ? "bg-primary text-primary-foreground font-semibold" : "text-foreground hover:bg-muted"
                         }`}
                 >
                     <BiFolderOpen size={16} className="shrink-0" />
@@ -104,8 +104,8 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                 {folders.map((folder) => (
                     <div
                         key={folder.id}
-                        className={`group flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors mb-1 ${selectedFolder?.id === folder.id
-                            ? "bg-primary text-primary-foreground"
+                        className={`group flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors mb-1 ${selectedFolder?.id === folder.id && !viewingBin
+                            ? "bg-primary text-primary-foreground font-semibold"
                             : "text-foreground hover:bg-muted"
                             }`}
                     >
@@ -175,6 +175,23 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                     </p>
                 )}
             </ScrollArea>
+
+            <div className="px-2 py-1.5 border-t border-border/40 shrink-0">
+                <button
+                    onClick={() => {
+                        onSelectBin();
+                        setMobileOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+                        viewingBin
+                            ? "bg-primary text-primary-foreground font-semibold"
+                            : "text-foreground hover:bg-muted"
+                    }`}
+                >
+                    <FiTrash2 size={16} className="shrink-0" />
+                    <span className="truncate">Bin</span>
+                </button>
+            </div>
 
             <div className="border-t border-border px-3 py-3 flex items-center justify-between shrink-0">
                 <button

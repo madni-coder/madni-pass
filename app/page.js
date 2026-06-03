@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { getFolders, getAllNotes, getNotes, deleteNote } from "@/lib/db";
+import { getFolders, getAllNotes, getNotes, deleteNote, deleteNotePermanently, restoreNote, clearBin } from "@/lib/db";
 import { decrypt } from "@/lib/crypto";
 import Sidebar from "@/components/Sidebar";
 import NoteViewer from "@/components/NoteViewer";
@@ -13,7 +13,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FiSearch, FiPlus, FiFileText, FiTrash2, FiLoader, FiMenu } from "react-icons/fi";
+import { FiSearch, FiPlus, FiFileText, FiTrash2, FiLoader, FiMenu, FiRotateCcw } from "react-icons/fi";
 import { useTheme } from "next-themes";
 import { notify } from "@/lib/notify";
 
@@ -25,6 +25,7 @@ export default function Home() {
   const [folders, setFolders] = useState([]);
   const [notes, setNotes] = useState([]);
   const [selectedFolder, setSelectedFolder] = useState(null);
+  const [viewingBin, setViewingBin] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -113,12 +114,16 @@ export default function Home() {
     return () => { try { window.removeEventListener("masterPasswordSet", handler); } catch { } };
   }, [loadNotes]);
 
+  const displayNotes = viewingBin
+    ? notes.filter((n) => n.inBin)
+    : notes.filter((n) => !n.inBin);
+
   const filteredNotes = searchQuery
-    ? notes.filter((n) => {
+    ? displayNotes.filter((n) => {
       const q = searchQuery.toLowerCase();
       return n.title.toLowerCase().includes(q) || (n.content || "").toLowerCase().includes(q);
     })
-    : notes;
+    : displayNotes;
 
   const [newNoteFolderId, setNewNoteFolderId] = useState(null);
 
@@ -148,17 +153,69 @@ export default function Home() {
   const handleDeleteNote = async (noteToDelete) => {
     if (!noteToDelete) return;
     try {
-      await deleteNote(noteToDelete.id);
+      if (noteToDelete.inBin) {
+        // Delete permanently
+        await deleteNotePermanently(noteToDelete.id);
+        setNotes((prev) => {
+          const nextNotes = prev.filter((note) => note.id !== noteToDelete.id);
+          writeNotesCache(selectedFolder, nextNotes);
+          return nextNotes;
+        });
+        removeCachedNote(noteToDelete.id);
+        notify("Note permanently deleted");
+      } else {
+        // Move to Bin
+        await deleteNote(noteToDelete.id);
+        setNotes((prev) => {
+          const nextNotes = prev.map((note) => note.id === noteToDelete.id ? { ...note, inBin: true } : note);
+          writeNotesCache(selectedFolder, nextNotes);
+          return nextNotes;
+        });
+        upsertCachedNote({ ...noteToDelete, inBin: true });
+        notify("Note moved to Bin");
+      }
+      if (activeNote?.id === noteToDelete.id) { setNotepadOpen(false); setActiveNote(null); }
+    } catch (err) {
+      notify("Failed to delete note: " + err.message, "error");
+    }
+  };
+
+  const handleRestoreNote = async (noteToRestore) => {
+    if (!noteToRestore) return;
+    try {
+      await restoreNote(noteToRestore.id);
       setNotes((prev) => {
-        const nextNotes = prev.filter((note) => note.id !== noteToDelete.id);
+        const nextNotes = prev.map((note) => note.id === noteToRestore.id ? { ...note, inBin: false } : note);
         writeNotesCache(selectedFolder, nextNotes);
         return nextNotes;
       });
-      removeCachedNote(noteToDelete.id);
-      if (activeNote?.id === noteToDelete.id) { setNotepadOpen(false); setActiveNote(null); }
-      notify("Note deleted");
+      upsertCachedNote({ ...noteToRestore, inBin: false });
+      if (activeNote?.id === noteToRestore.id) {
+        setActiveNote({ ...activeNote, inBin: false });
+      }
+      notify("Note restored");
     } catch (err) {
-      notify("Failed to delete note: " + err.message, "error");
+      notify("Failed to restore note: " + err.message, "error");
+    }
+  };
+
+  const handleClearBin = async () => {
+    try {
+      const binNotes = notes.filter((n) => n.inBin);
+      if (binNotes.length === 0) {
+        notify("Bin is already empty");
+        return;
+      }
+      await clearBin(user.uid);
+      setNotes((prev) => {
+        const nextNotes = prev.filter((note) => !note.inBin);
+        writeNotesCache(selectedFolder, nextNotes);
+        return nextNotes;
+      });
+      binNotes.forEach((n) => removeCachedNote(n.id));
+      notify("Bin cleared");
+    } catch (err) {
+      notify("Failed to clear bin: " + err.message, "error");
     }
   };
 
@@ -180,8 +237,10 @@ export default function Home() {
         <Sidebar folders={folders} setFolders={setFolders} selectedFolder={selectedFolder}
           userId={user.uid}
           onLogout={async () => { await logOut(); router.replace("/auth"); }}
-          onSelectFolder={(folder) => { setSelectedFolder(folder); setSearchQuery(""); }}
-          mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
+          onSelectFolder={(folder) => { setSelectedFolder(folder); setViewingBin(false); setSearchQuery(""); }}
+          mobileOpen={mobileOpen} setMobileOpen={setMobileOpen}
+          viewingBin={viewingBin}
+          onSelectBin={() => { setViewingBin(true); setSelectedFolder(null); setSearchQuery(""); }} />
 
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Top Bar */}
@@ -210,9 +269,15 @@ export default function Home() {
                   )}
                 </div>
 
-                <button onClick={() => handleNewNote(selectedFolder?.id ?? null)} className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-md">
-                  <FiPlus size={18} />
-                </button>
+                {viewingBin ? (
+                  <button onClick={handleClearBin} className="w-12 h-12 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center shadow-md">
+                    <FiTrash2 size={18} />
+                  </button>
+                ) : (
+                  <button onClick={() => handleNewNote(selectedFolder?.id ?? null)} className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-md">
+                    <FiPlus size={18} />
+                  </button>
+                )}
               </div>
 
               {/* Desktop / larger: central search (or when mobileSearchOpen true) */}
@@ -233,10 +298,17 @@ export default function Home() {
             <div className={mobileSearchOpen ? 'hidden' : 'hidden lg:flex items-center gap-4'}>
               {/* Desktop labeled button: hidden on small screens */}
               <div className="hidden sm:flex">
-                <Button onClick={() => handleNewNote(selectedFolder?.id ?? null)} className="h-12 px-4 bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 flex items-center gap-2">
-                  <FiPlus size={16} />
-                  <span className="ml-2">{selectedFolder ? `Add Note` : "New Note"}</span>
-                </Button>
+                {viewingBin ? (
+                  <Button onClick={handleClearBin} className="h-12 px-4 bg-destructive hover:bg-destructive/90 text-destructive-foreground shrink-0 flex items-center gap-2">
+                    <FiTrash2 size={16} />
+                    <span className="ml-2">Clear Bin</span>
+                  </Button>
+                ) : (
+                  <Button onClick={() => handleNewNote(selectedFolder?.id ?? null)} className="h-12 px-4 bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 flex items-center gap-2">
+                    <FiPlus size={16} />
+                    <span className="ml-2">{selectedFolder ? `Add Note` : "New Note"}</span>
+                  </Button>
+                )}
               </div>
 
               {/* app name removed from right side on desktop */}
@@ -247,7 +319,7 @@ export default function Home() {
           <div className="flex-1 overflow-y-auto p-4 lg:p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-foreground flex-1 truncate mr-4">
-                {searchQuery ? `Search: "${searchQuery}"` : selectedFolder ? selectedFolder.name : "All Notes"}
+                {searchQuery ? `Search: "${searchQuery}"` : viewingBin ? "Bin" : selectedFolder ? selectedFolder.name : "All Notes"}
               </h2>
               <p className="text-sm text-muted-foreground shrink-0">{filteredNotes.length} note{filteredNotes.length !== 1 ? "s" : ""}{searchQuery && " found"}</p>
             </div>
@@ -259,6 +331,8 @@ export default function Home() {
                 </div>
                 {searchQuery ? (
                   <><p className="text-muted-foreground font-medium">No results found</p><p className="text-muted-foreground/60 text-sm mt-1">Nothing matched "{searchQuery}"</p></>
+                ) : viewingBin ? (
+                  <><p className="text-muted-foreground font-medium">Bin is empty</p><p className="text-muted-foreground/60 text-sm mt-1">Deleted notes will appear here</p></>
                 ) : selectedFolder ? (
                   <><p className="text-muted-foreground font-medium">No notes in this folder</p><p className="text-muted-foreground/60 text-sm mt-1">Create a new note to get started</p></>
                 ) : (
@@ -275,7 +349,9 @@ export default function Home() {
                     note={note}
                     searchQuery={searchQuery}
                     onClick={() => handleOpenNote(note)}
-                    onDelete={(e) => { e.stopPropagation(); handleDeleteNote(note); }}
+                    onDelete={handleDeleteNote}
+                    onRestore={handleRestoreNote}
+                    inBin={viewingBin || note.inBin}
                   />
                 ))}
               </div>
@@ -291,7 +367,8 @@ export default function Home() {
           userId={user.uid}
           onSave={handleSaveNote}
           onClose={() => { setNotepadOpen(false); loadNotes(); }}
-          onDelete={(noteToDelete) => handleDeleteNote(noteToDelete)}
+          onDelete={handleDeleteNote}
+          onRestore={handleRestoreNote}
         />
       )}
     </>
@@ -318,7 +395,7 @@ function highlight(text, query) {
   );
 }
 
-function NoteCard({ note, folderName, searchQuery, onClick, onDelete }) {
+function NoteCard({ note, folderName, searchQuery, onClick, onDelete, onRestore, inBin }) {
   const { theme } = useTheme();
   const snippet = (note.content || "").slice(0, 120) + ((note.content || "").length > 120 ? "..." : "");
   const date = formatDate(note.updatedAt || note.createdAt);
@@ -367,12 +444,32 @@ function NoteCard({ note, folderName, searchQuery, onClick, onDelete }) {
             </span>
           )}
         </div>
-        <button
-          onClick={onDelete}
-          className="w-6 h-6 flex items-center justify-center rounded-lg text-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-150 opacity-0 group-hover:opacity-100 shrink-0"
-        >
-          <FiTrash2 size={11} />
-        </button>
+        {inBin ? (
+          <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => onRestore(note)}
+              className="w-6 h-6 flex items-center justify-center rounded-lg text-foreground hover:text-green-500 hover:bg-green-500/10 transition-all duration-150 opacity-0 group-hover:opacity-100"
+              title="Restore"
+            >
+              <FiRotateCcw size={11} />
+            </button>
+            <button
+              onClick={() => onDelete(note)}
+              className="w-6 h-6 flex items-center justify-center rounded-lg text-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-150 opacity-0 group-hover:opacity-100"
+              title="Delete Permanently"
+            >
+              <FiTrash2 size={11} />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(note); }}
+            className="w-6 h-6 flex items-center justify-center rounded-lg text-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-150 opacity-0 group-hover:opacity-100 shrink-0"
+            title="Delete"
+          >
+            <FiTrash2 size={11} />
+          </button>
+        )}
       </div>
     </div>
   );

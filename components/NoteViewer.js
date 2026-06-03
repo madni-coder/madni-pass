@@ -4,7 +4,7 @@ import { createNote, updateNote } from "@/lib/db";
 import { storeImage, getImageSrc } from "@/lib/imageStore";
 import { encrypt } from "@/lib/crypto";
 import { notify } from "@/lib/notify";
-import { FiSearch, FiX, FiChevronUp, FiChevronDown, FiImage, FiLoader, FiCheck, FiMoreHorizontal, FiHash, FiCopy, FiWifiOff, FiArrowLeft, FiTrash2 } from "react-icons/fi";
+import { FiSearch, FiX, FiChevronUp, FiChevronDown, FiImage, FiLoader, FiCheck, FiMoreHorizontal, FiHash, FiCopy, FiWifiOff, FiArrowLeft, FiTrash2, FiRotateCcw } from "react-icons/fi";
 
 function escHtml(str) {
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -161,7 +161,7 @@ function buildHighlightHtml(text, query, matches, activeIdx) {
     return result;
 }
 
-export default function NoteViewer({ note, folderId, onSave, onClose, userId, onDelete }) {
+export default function NoteViewer({ note, folderId, onSave, onClose, userId, onDelete, onRestore }) {
     const isNew = !note?.id;
     const [title, setTitle] = useState(note?.title || "");
     const [content, setContent] = useState(note?.content || "");
@@ -265,6 +265,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, on
 
     // Auto-save: debounce 800ms on title/content change
     useEffect(() => {
+        if (note?.inBin) return;
         if (!title.trim()) return;
         clearTimeout(saveTimerRef.current);
         saveTimerRef.current = setTimeout(async () => {
@@ -447,10 +448,11 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, on
                     </button>
                     <div className="hidden sm:block w-1 h-7 rounded-full bg-primary shrink-0" />
                     <input
-                        autoFocus
+                        autoFocus={!note?.inBin}
                         placeholder="Note title..."
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
+                        readOnly={note?.inBin}
                         className="flex-1 bg-transparent text-foreground text-lg font-bold placeholder:text-muted-foreground/50 focus:outline-none tracking-wide min-w-0"
                     />
                     {/* Auto-save status + three-dots menu */}
@@ -504,11 +506,27 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, on
                                         <span className="text-muted-foreground"><FiCopy size={13} /></span>Copy Note
                                     </button>
                                     <div style={{ height: 1, background: "var(--border)", margin: "3px 0" }} />
-                                    <button onClick={handleDelete}
-                                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-destructive hover:bg-destructive/10 transition-colors"
-                                    >
-                                        <span className="text-destructive"><FiTrash2 size={13} /></span>Delete Note
-                                    </button>
+                                    {note?.inBin ? (
+                                        <>
+                                            <button onClick={() => { if (onRestore) onRestore(note); setMenuOpen(false); }}
+                                                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-foreground hover:bg-muted transition-colors"
+                                            >
+                                                <span className="text-muted-foreground"><FiRotateCcw size={13} /></span>Restore Note
+                                            </button>
+                                            <div style={{ height: 1, background: "var(--border)", margin: "3px 0" }} />
+                                            <button onClick={handleDelete}
+                                                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-destructive hover:bg-destructive/10 transition-colors"
+                                            >
+                                                <span className="text-destructive"><FiTrash2 size={13} /></span>Delete Permanently
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <button onClick={handleDelete}
+                                            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-destructive hover:bg-destructive/10 transition-colors"
+                                        >
+                                            <span className="text-destructive"><FiTrash2 size={13} /></span>Delete Note
+                                        </button>
+                                    )}
 
                                 </div>
                             )}
@@ -522,6 +540,20 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, on
                         </button>
                     </span>
                 </div>
+
+                {note?.inBin && (
+                    <div className="flex items-center justify-between gap-3 px-5 py-2.5 border-b border-amber-500/30 bg-amber-500/10 text-amber-200">
+                        <span className="text-xs font-medium">This note is in the Bin. Restore it to edit.</span>
+                        <button
+                            onClick={() => {
+                                if (onRestore) onRestore(note);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1 rounded bg-amber-500 text-black text-xs font-bold hover:bg-amber-400 transition-colors"
+                        >
+                            <FiRotateCcw size={11} /> Restore
+                        </button>
+                    </div>
+                )}
 
 
 
@@ -610,6 +642,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, on
                         onKeyDown={(e) => {
                             if ((e.metaKey || e.ctrlKey) && e.key === "f") { e.preventDefault(); srRef.current?.focus(); }
                         }}
+                        readOnly={note?.inBin}
                         style={{
                             ...sharedTextStyle,
                             position: "absolute",
