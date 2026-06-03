@@ -27,11 +27,10 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
     const firstName = rawFirst ? (rawFirst.charAt(0).toUpperCase() + rawFirst.slice(1)) : "";
     const [newFolderName, setNewFolderName] = useState("");
     const [showNewFolder, setShowNewFolder] = useState(false);
-    const [renameTarget, setRenameTarget] = useState(null);
-    const [renameName, setRenameName] = useState("");
-    const [deleteTarget, setDeleteTarget] = useState(null);
-
-    const [logoutConfirm, setLogoutConfirm] = useState(false);
+        const [renameTarget, setRenameTarget] = useState(null);
+        const [renameName, setRenameName] = useState("");
+    
+        const [logoutConfirm, setLogoutConfirm] = useState(false);
 
     const handleCreate = async () => {
         if (!newFolderName.trim()) return;
@@ -53,12 +52,16 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
         notify("Folder renamed");
     };
 
-    const handleDelete = async () => {
-        await deleteFolder(deleteTarget.id);
-        setFolders((prev) => prev.filter((f) => f.id !== deleteTarget.id));
-        if (selectedFolder?.id === deleteTarget.id) onSelectFolder(null);
-        setDeleteTarget(null);
-        notify("Folder deleted");
+    const handleDeleteFolder = async (folderToDelete) => {
+        if (!folderToDelete) return;
+        try {
+            await deleteFolder(folderToDelete.id);
+            setFolders((prev) => prev.filter((f) => f.id !== folderToDelete.id));
+            if (selectedFolder?.id === folderToDelete.id) onSelectFolder(null);
+            notify("Folder deleted");
+        } catch (err) {
+            notify("Failed to delete folder: " + err.message, "error");
+        }
     };
 
     const SidebarContent = () => (
@@ -133,7 +136,7 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                     className="text-destructive hover:text-destructive focus:text-destructive hover:bg-muted focus:bg-muted cursor-pointer"
-                                    onClick={() => setDeleteTarget(folder)}
+                                    onClick={() => handleDeleteFolder(folder)}
                                 >
                                     <FiTrash2 size={14} className="mr-2" /> Delete
                                 </DropdownMenuItem>
@@ -243,21 +246,6 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                         <AlertDialogAction onClick={onLogout} className="bg-destructive hover:bg-destructive/90 flex items-center gap-1.5">
                             <FaPowerOff size={12} /> Yes, Logout
                         </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-
-            <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
-                <AlertDialogContent className="bg-card border-border text-foreground">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Delete folder?</AlertDialogTitle>
-                        <AlertDialogDescription className="text-muted-foreground">
-                            "{deleteTarget?.name}" will be permanently deleted.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel className="bg-muted border-border text-muted-foreground hover:bg-muted/80">Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

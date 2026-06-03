@@ -4,7 +4,7 @@ import { createNote, updateNote } from "@/lib/db";
 import { storeImage, getImageSrc } from "@/lib/imageStore";
 import { encrypt } from "@/lib/crypto";
 import { notify } from "@/lib/notify";
-import { FiSearch, FiX, FiChevronUp, FiChevronDown, FiImage, FiLoader, FiCheck, FiMoreHorizontal, FiHash, FiCopy, FiWifiOff, FiArrowLeft } from "react-icons/fi";
+import { FiSearch, FiX, FiChevronUp, FiChevronDown, FiImage, FiLoader, FiCheck, FiMoreHorizontal, FiHash, FiCopy, FiWifiOff, FiArrowLeft, FiTrash2 } from "react-icons/fi";
 
 function escHtml(str) {
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -161,7 +161,7 @@ function buildHighlightHtml(text, query, matches, activeIdx) {
     return result;
 }
 
-export default function NoteViewer({ note, folderId, onSave, onClose, userId }) {
+export default function NoteViewer({ note, folderId, onSave, onClose, userId, onDelete }) {
     const isNew = !note?.id;
     const [title, setTitle] = useState(note?.title || "");
     const [content, setContent] = useState(note?.content || "");
@@ -380,6 +380,17 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
             .catch((err) => notify("Copy failed: " + err.message, "error"));
     };
 
+    const handleDelete = () => {
+        if (noteIdRef.current) {
+            if (onDelete) {
+                onDelete({ id: noteIdRef.current, title: title.trim() || "Untitled Note" });
+            }
+        } else {
+            onClose();
+        }
+        setMenuOpen(false);
+    };
+
     const isDesktop = typeof window !== "undefined" && window.innerWidth >= 640;
     const panelStyle = isDesktop
         ? {
@@ -492,6 +503,13 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId }) 
                                     >
                                         <span className="text-muted-foreground"><FiCopy size={13} /></span>Copy Note
                                     </button>
+                                    <div style={{ height: 1, background: "var(--border)", margin: "3px 0" }} />
+                                    <button onClick={handleDelete}
+                                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-destructive hover:bg-destructive/10 transition-colors"
+                                    >
+                                        <span className="text-destructive"><FiTrash2 size={13} /></span>Delete Note
+                                    </button>
+
                                 </div>
                             )}
                         </div>

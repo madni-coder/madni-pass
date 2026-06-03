@@ -30,7 +30,6 @@ export default function Home() {
 
   const [notepadOpen, setNotepadOpen] = useState(false);
   const [activeNote, setActiveNote] = useState(null);
-  const [deleteTarget, setDeleteTarget] = useState(null);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { theme } = useTheme();
@@ -146,17 +145,21 @@ export default function Home() {
     setActiveNote(savedNote);
   };
 
-  const handleDeleteNote = async () => {
-    await deleteNote(deleteTarget.id);
-    setNotes((prev) => {
-      const nextNotes = prev.filter((note) => note.id !== deleteTarget.id);
-      writeNotesCache(selectedFolder, nextNotes);
-      return nextNotes;
-    });
-    removeCachedNote(deleteTarget.id);
-    if (activeNote?.id === deleteTarget.id) { setNotepadOpen(false); setActiveNote(null); }
-    setDeleteTarget(null);
-    notify("Note deleted");
+  const handleDeleteNote = async (noteToDelete) => {
+    if (!noteToDelete) return;
+    try {
+      await deleteNote(noteToDelete.id);
+      setNotes((prev) => {
+        const nextNotes = prev.filter((note) => note.id !== noteToDelete.id);
+        writeNotesCache(selectedFolder, nextNotes);
+        return nextNotes;
+      });
+      removeCachedNote(noteToDelete.id);
+      if (activeNote?.id === noteToDelete.id) { setNotepadOpen(false); setActiveNote(null); }
+      notify("Note deleted");
+    } catch (err) {
+      notify("Failed to delete note: " + err.message, "error");
+    }
   };
 
   const getFolderName = (folderId) => folders.find((f) => f.id === folderId)?.name || "";
@@ -272,26 +275,13 @@ export default function Home() {
                     note={note}
                     searchQuery={searchQuery}
                     onClick={() => handleOpenNote(note)}
-                    onDelete={(e) => { e.stopPropagation(); setDeleteTarget(note); }}
+                    onDelete={(e) => { e.stopPropagation(); handleDeleteNote(note); }}
                   />
                 ))}
               </div>
             )}
           </div>
         </div>
-
-        <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
-          <AlertDialogContent className="bg-card border-border text-foreground">
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete note?</AlertDialogTitle>
-              <AlertDialogDescription className="text-muted-foreground">"{deleteTarget?.title}" will be permanently deleted.</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="bg-muted border-border text-muted-foreground hover:bg-muted/80">Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteNote} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
 
       {notepadOpen && (
@@ -301,6 +291,7 @@ export default function Home() {
           userId={user.uid}
           onSave={handleSaveNote}
           onClose={() => { setNotepadOpen(false); loadNotes(); }}
+          onDelete={(noteToDelete) => handleDeleteNote(noteToDelete)}
         />
       )}
     </>
