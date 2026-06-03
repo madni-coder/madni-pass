@@ -196,6 +196,12 @@ export default function PinLockScreen({
                         margin-top: 0 !important;
                         margin-bottom: 0 !important;
                     }
+                    
+                    /* Shifting inline folder lock card to the top on mobile viewports */
+                    .pin-inline-container {
+                        align-items: flex-start !important;
+                        padding-top: 1.5rem !important;
+                    }
                 }
 
                 /* Short height screens (e.g. landscape phones or laptops) */
@@ -310,7 +316,7 @@ export default function PinLockScreen({
 
     if (inline) {
         return (
-            <div className="w-full h-full flex items-center justify-center py-10 px-4">
+            <div className="w-full h-full flex items-center justify-center py-10 px-4 pin-inline-container">
                 {content}
             </div>
         );
