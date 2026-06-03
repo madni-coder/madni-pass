@@ -27,7 +27,7 @@ export async function POST(request) {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                from: "Madni Pass <onboarding@resend.dev>",
+                from: "Madni Pass <noreply@lazynote.website>",
                 to: [email],
                 subject: "Reset your Madni Pass PIN",
                 html: `
