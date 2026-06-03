@@ -21,8 +21,8 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
     const fileRef = useRef(null);
 
     const handleSave = async () => {
-        if (!title.trim()) { notify("Note ka title dalo", "error"); return; }
-        if (!folderId && isNew) { notify("Pehle ek folder select karo", "error"); return; }
+        if (!title.trim()) { notify("Please enter a note title", "error"); return; }
+        if (!folderId && isNew) { notify("Please select a folder first", "error"); return; }
         setSaving(true);
         try {
             // Use client-side encryption for local store as well — only retrieve any existing master password
@@ -34,11 +34,11 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
             if (isNew) {
                 const saved = createNote(folderId, encTitle, encContent);
                 onSave({ ...saved });
-                notify("Note save ho gaya!");
+                notify("Note saved successfully!");
             } else {
                 updateNoteData(note.id, encTitle, encContent, images);
                 onSave({ ...note, title: title.trim(), content, images });
-                notify("Note update ho gaya!");
+                notify("Note updated successfully!");
             }
         } catch (err) {
             notify("Failed to save: " + err.message, "error");
@@ -50,8 +50,8 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
     const handleImageUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        if (file.size > 10 * 1024 * 1024) { notify("Image 10MB se badi nahi honi chahiye", "error"); return; }
-        if (isNew) { notify("Pehle note save karo, phir image daalo", "error"); return; }
+        if (file.size > 10 * 1024 * 1024) { notify("Image size must be smaller than 10MB", "error"); return; }
+        if (isNew) { notify("Please save the note first before attaching an image", "error"); return; }
         setUploading(true);
         try {
             let master = null;
@@ -60,9 +60,9 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
             const newImages = [...images, imgData];
             setImages(newImages);
             updateNoteData(note.id, title, content, newImages);
-            notify("Image add ho gayi!");
+            notify("Image attached successfully!");
         } catch (err) {
-            notify("Image upload nahi hui: " + (err?.message || err), "error");
+            notify("Failed to upload image: " + (err?.message || err), "error");
         } finally {
             setUploading(false);
             e.target.value = "";
@@ -79,14 +79,14 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
         const newImages = images.filter((_, i) => i !== idx);
         setImages(newImages);
         updateNoteData(note.id, title, content, newImages);
-        notify("Image delete ho gayi!");
+        notify("Image deleted successfully!");
     };
 
     return (
         <Dialog open onOpenChange={onClose}>
             <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-2xl w-full max-h-[90vh] flex flex-col p-0">
                 <DialogHeader className="px-6 pt-5 pb-3 border-b border-gray-800">
-                    <DialogTitle>{isNew ? "Naya Note" : "Note Edit karo"}</DialogTitle>
+                    <DialogTitle>{isNew ? "New Note" : "Edit Note"}</DialogTitle>
                 </DialogHeader>
 
                 <ScrollArea className="flex-1 px-6 py-4">
@@ -140,14 +140,14 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
                                 <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                             </div>
                         )}
-                        {isNew && <p className="text-xs text-gray-600">💡 Save karne ke baad images attach kar sakte ho</p>}
+                        {isNew && <p className="text-xs text-gray-600">💡 You can attach images after saving the note</p>}
                     </div>
                 </ScrollArea>
 
                 <DialogFooter className="px-6 py-4 border-t border-gray-800">
                     <Button variant="ghost" onClick={onClose} className="text-gray-400 hover:text-white">Cancel</Button>
                     <Button onClick={handleSave} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-                        {saving ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Saving...</> : <><Save className="w-4 h-4 mr-2" />Save karo</>}
+                        {saving ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Saving...</> : <><Save className="w-4 h-4 mr-2" />Save</>}
                     </Button>
                 </DialogFooter>
             </DialogContent>

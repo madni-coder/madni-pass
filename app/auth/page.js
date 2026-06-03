@@ -46,13 +46,13 @@ export default function AuthPage() {
 
     const getFriendlyError = (code) => {
         switch (code) {
-            case "auth/popup-blocked": return "Browser ne popup block kar di. Please allow popups ya dobarah try karo.";
-            case "auth/popup-closed-by-user": return "Sign in cancel ho gayi. Dobara try karo.";
-            case "auth/network-request-failed": return "Internet connection check karo aur dobara try karo.";
-            case "auth/too-many-requests": return "Bahut zyada tries. Thodi der baad try karo.";
-            case "auth/user-disabled": return "Ye account disable ho gaya hai.";
-            case "auth/invalid-test-credentials": return "Test login ke liye ID `test` aur password `123` use karo.";
-            default: return "Sign in fail hua. Dobara try karo.";
+            case "auth/popup-blocked": return "Browser blocked the popup. Please allow popups and try again.";
+            case "auth/popup-closed-by-user": return "Sign in cancelled. Please try again.";
+            case "auth/network-request-failed": return "Please check your internet connection and try again.";
+            case "auth/too-many-requests": return "Too many requests. Please try again later.";
+            case "auth/user-disabled": return "This account has been disabled.";
+            case "auth/invalid-test-credentials": return "For test login, use ID `test` and password `123`.";
+            default: return "Sign in failed. Please try again.";
         }
     };
 

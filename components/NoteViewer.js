@@ -323,8 +323,8 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
     const handleImageUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        if (file.size > 10 * 1024 * 1024) { notify("Image 10MB se badi nahi honi chahiye", "error"); return; }
-        if (!noteIdRef.current) { notify("Pehle note ka title likho, phir image daalo", "error"); return; }
+        if (file.size > 10 * 1024 * 1024) { notify("Image size must be smaller than 10MB", "error"); return; }
+        if (!noteIdRef.current) { notify("Please add a title before attaching an image", "error"); return; }
         setUploading(true);
         try {
             const master = userId;
