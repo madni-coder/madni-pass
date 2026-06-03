@@ -45,6 +45,21 @@ export default function Home() {
     getUserPinHash(user.uid).then(setGlobalPinHash).catch(() => {});
   }, [user]);
 
+  useEffect(() => {
+    const handleReset = () => {
+      setGlobalPinHash(null);
+    };
+    const handleSet = (e) => {
+      setGlobalPinHash(e.detail.pinHash);
+    };
+    window.addEventListener("globalPinReset", handleReset);
+    window.addEventListener("globalPinSet", handleSet);
+    return () => {
+      window.removeEventListener("globalPinReset", handleReset);
+      window.removeEventListener("globalPinSet", handleSet);
+    };
+  }, []);
+
   const [notepadOpen, setNotepadOpen] = useState(false);
   const [activeNote, setActiveNote] = useState(null);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -264,6 +279,7 @@ export default function Home() {
       <div className="flex h-screen overflow-hidden bg-background">
         <Sidebar folders={folders} setFolders={setFolders} selectedFolder={selectedFolder}
           userId={user.uid}
+          userEmail={user?.email}
           onLogout={async () => { await logOut(); router.replace("/auth"); }}
           onSelectFolder={(folder) => { setSelectedFolder(folder); setViewingBin(false); setSearchQuery(""); }}
           mobileOpen={mobileOpen} setMobileOpen={setMobileOpen}
@@ -356,6 +372,8 @@ export default function Home() {
                 title={`"${selectedFolder.name}" is Locked`}
                 description="Enter the 4-digit PIN to access this folder."
                 correctPinHash={globalPinHash}
+                userId={user.uid}
+                userEmail={user.email}
                 onSuccess={() => handleUnlockFolder(selectedFolder.id)}
                 onCancel={() => setSelectedFolder(null)}
               />
@@ -411,6 +429,7 @@ export default function Home() {
           note={activeNote}
           folderId={activeNote?.folderId ?? newNoteFolderId}
           userId={user.uid}
+          userEmail={user?.email}
           onSave={handleSaveNote}
           onClose={() => { setNotepadOpen(false); loadNotes(); }}
           onDelete={handleDeleteNote}

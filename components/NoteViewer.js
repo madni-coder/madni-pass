@@ -163,7 +163,7 @@ function buildHighlightHtml(text, query, matches, activeIdx) {
     return result;
 }
 
-export default function NoteViewer({ note, folderId, onSave, onClose, userId, onDelete, onRestore, globalPinHash, setGlobalPinHash }) {
+export default function NoteViewer({ note, folderId, onSave, onClose, userId, userEmail, onDelete, onRestore, globalPinHash, setGlobalPinHash }) {
     const isNew = !note?.id;
     const [title, setTitle] = useState(note?.title || "");
     const [content, setContent] = useState(note?.content || "");
@@ -473,6 +473,8 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, on
                 title="Locked Note"
                 description="Enter the 4-digit PIN to view note content."
                 correctPinHash={globalPinHash}
+                userId={userId}
+                userEmail={userEmail}
                 onSuccess={() => {
                     setIsUnlocked(true);
                 }}
@@ -880,6 +882,8 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, on
                     title="Remove Note Lock"
                     description="Enter your 4-digit PIN to remove lock."
                     correctPinHash={globalPinHash}
+                    userId={userId}
+                    userEmail={userEmail}
                     onSuccess={async () => {
                         try {
                             if (noteIdRef.current) {

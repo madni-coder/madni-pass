@@ -21,7 +21,7 @@ import { useTheme } from "next-themes";
 import PinLockScreen from "./PinLockScreen";
 import CryptoJS from "crypto-js";
 
-export default function Sidebar({ folders, setFolders, selectedFolder, onSelectFolder, userId, onLogout, mobileOpen, setMobileOpen, viewingBin, onSelectBin, unlockedFolders = [], onUnlockFolder, globalPinHash, setGlobalPinHash }) {
+export default function Sidebar({ folders, setFolders, selectedFolder, onSelectFolder, userId, userEmail, onLogout, mobileOpen, setMobileOpen, viewingBin, onSelectBin, unlockedFolders = [], onUnlockFolder, globalPinHash, setGlobalPinHash }) {
     const { theme, setTheme } = useTheme();
     const logoSrc = (theme === "light") ? "/lightLogo.png" : "/lazyNoteIcon.png";
     const { user } = useAuth();
@@ -334,6 +334,8 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                     title={pinAction.mode === "set" ? "Lock Folder" : pinAction.mode === "remove" ? "Remove Folder Lock" : "Unlock Folder"}
                     description={pinAction.mode === "set" ? `Set a 4-digit PIN to lock folder "${pinAction.folder.name}".` : `Enter the 4-digit PIN for folder "${pinAction.folder.name}".`}
                     correctPinHash={globalPinHash}
+                    userId={userId}
+                    userEmail={userEmail}
                     onSuccess={async (pin) => {
                         const pinHash = CryptoJS.SHA256(pin).toString();
                         try {
