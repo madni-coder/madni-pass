@@ -831,7 +831,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                                         <FiLoader size={12} className="animate-spin text-muted-foreground/60" />
                                     </div>
                                 )}
-                                <button onClick={() => handleDeleteImage(img, idx)} className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 rounded-full items-center justify-center hidden group-hover:flex">
+                                <button onClick={() => handleDeleteImage(img, idx)} className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 rounded-full flex sm:hidden sm:group-hover:flex items-center justify-center">
                                     <FiX size={10} className="text-white" />
                                 </button>
                             </div>

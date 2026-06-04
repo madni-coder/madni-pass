@@ -167,7 +167,7 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                             </button>
                             <DropdownMenu>
                                 <DropdownMenuTrigger
-                                    className={`w-5 h-5 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 transition-opacity ${selectedFolder?.id === folder.id ? "opacity-100" : ""} hover:bg-white/10`}
+                                    className={`w-5 h-5 flex items-center justify-center rounded opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity ${selectedFolder?.id === folder.id ? "opacity-100" : ""} hover:bg-white/10`}
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     <FiMoreHorizontal size={14} />

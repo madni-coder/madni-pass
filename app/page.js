@@ -522,14 +522,14 @@ function NoteCard({ note, folderName, searchQuery, onClick, onDelete, onRestore,
           <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => onRestore(note)}
-              className="w-6 h-6 flex items-center justify-center rounded-lg text-foreground hover:text-green-500 hover:bg-green-500/10 transition-all duration-150 opacity-0 group-hover:opacity-100"
+              className="w-6 h-6 flex items-center justify-center rounded-lg text-foreground hover:text-green-500 hover:bg-green-500/10 transition-all duration-150 opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
               title="Restore"
             >
               <FiRotateCcw size={11} />
             </button>
             <button
               onClick={() => onDelete(note)}
-              className="w-6 h-6 flex items-center justify-center rounded-lg text-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-150 opacity-0 group-hover:opacity-100"
+              className="w-6 h-6 flex items-center justify-center rounded-lg text-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-150 opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
               title="Delete Permanently"
             >
               <FiTrash2 size={11} />
@@ -538,7 +538,7 @@ function NoteCard({ note, folderName, searchQuery, onClick, onDelete, onRestore,
         ) : (
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(note); }}
-            className="w-6 h-6 flex items-center justify-center rounded-lg text-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-150 opacity-0 group-hover:opacity-100 shrink-0"
+            className="w-6 h-6 flex items-center justify-center rounded-lg text-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-150 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 shrink-0"
             title="Delete"
           >
             <FiTrash2 size={11} />
