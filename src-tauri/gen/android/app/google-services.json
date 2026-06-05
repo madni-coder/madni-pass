@@ -14,6 +14,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "504994185739-23qbgddqfktt9qdgges38gntqpptpake.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.madnipass.app",
+            "certificate_hash": "e266b37fb65719097c2fc998e7ba27cb0f5baba6"
+          }
+        },
+        {
+          "client_id": "504994185739-hvfephg7t8nso6n2tmm1me9bna19b3ub.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.madnipass.app",
+            "certificate_hash": "f09ab0e4880c965e6a5585affe0d6446df788d23"
+          }
+        },
+        {
           "client_id": "504994185739-bg3bbncjtel7rr79atm6bjnm9o3vpbso.apps.googleusercontent.com",
           "client_type": 3
         }
