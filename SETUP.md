@@ -2,27 +2,27 @@
 
 ## Firebase Setup (5 min)
 
-### Step 1: Firebase Project banao
+### Step 1: Create a Firebase Project
 
-1. [console.firebase.google.com](https://console.firebase.google.com) pe jao
-2. **"Add project"** click karo → project name do (ex: `madni-pass`) → Create
-3. Google Analytics off kar sakte ho
+1. Go to [console.firebase.google.com](https://console.firebase.google.com)
+2. Click **"Add project"** → enter project name (e.g., `madni-pass`) → Create
+3. You can turn off Google Analytics if you want.
 
 ---
 
-### Step 2: Authentication enable karo
+### Step 2: Enable Authentication
 
 1. Left sidebar → **Authentication** → Get started
 2. **Sign-in method** tab → **Email/Password** → Enable → Save
 
 ---
 
-### Step 3: Firestore Database banao
+### Step 3: Create Firestore Database
 
 1. Left sidebar → **Firestore Database** → Create database
-2. **Start in production mode** select karo → Next
-3. Location choose karo (asia-south1 for India) → Done
-4. **Rules** tab pe jao → ye rules paste karo:
+2. Select **Start in production mode** → Next
+3. Choose location (e.g., asia-south1 for India) → Done
+4. Go to **Rules** tab → paste these rules:
 
 ```
 rules_version = '2';
@@ -40,15 +40,15 @@ service cloud.firestore {
 }
 ```
 
-5. **Publish** karo
+5. Click **Publish**
 
 ---
 
-### Step 4: Storage enable karo (images ke liye)
+### Step 4: Enable Storage (for images)
 
 1. Left sidebar → **Storage** → Get started
 2. Production mode → Next → Done
-3. **Rules** tab → ye paste karo:
+3. Go to **Rules** tab → paste this:
 
 ```
 rules_version = '2';
@@ -61,15 +61,15 @@ service firebase.storage {
 }
 ```
 
-4. **Publish** karo
+4. Click **Publish**
 
 ---
 
-### Step 5: Web App register karo
+### Step 5: Register Web App
 
-1. Project Overview → **</>** (Web) icon click karo
-2. App nickname do → **Register app**
-3. Firebase config copy karo — kuch aisa dikhega:
+1. Project Overview → click **</>** (Web) icon
+2. Enter app nickname → **Register app**
+3. Copy the Firebase config — it will look something like this:
 
 ```js
 const firebaseConfig = {
@@ -84,9 +84,9 @@ const firebaseConfig = {
 
 ---
 
-### Step 6: `.env.local` update karo
+### Step 6: Update `.env.local`
 
-Project root mein `.env.local` file open karo aur apni values dalo:
+Open `.env.local` file in project root and enter your values:
 
 ```env
 NEXT_PUBLIC_FIREBASE_API_KEY=AIza...
@@ -99,24 +99,24 @@ NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abc123
 
 ---
 
-### Step 7: App run karo
+### Step 7: Run the App
 
 ```bash
 npm run dev
 ```
 
-Browser mein jao: [http://localhost:3000](http://localhost:3000)
+Go to your browser: [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## App Use Karna
+## Using the App
 
-### Register karte waqt:
-- **Email** → apni email
-- **Account Password** → Firebase login ke liye
-- **Master Password** → ⚠️ YE BAHUT ZAROORI HAI — ye password notes encrypt karta hai. Kahi note kar lo. Bhool gaye toh notes recover nahi honge.
+### When Registering:
+- **Email** → your email address
+- **Account Password** → for Firebase login
+- **Master Password** → ⚠️ THIS IS EXTREMELY IMPORTANT — this password encrypts your notes. Note it down somewhere safe. If you forget it, you will not be able to recover your notes.
 
-### Notes kaise likhein:
+### How to write Notes:
 ```
 Insta id - john@gmail.com
 Insta pass - 123456
@@ -126,15 +126,15 @@ Pass - 123453
 ```
 
 ### Search:
-- Search bar mein `insta` likho → sirf Instagram wala note aayega
-- `gmail` likho → Gmail wala note aayega
-- Content ke andar bhi search hogi
+- Type `insta` in the search bar → only the Instagram note will appear
+- Type `gmail` → the Gmail note will appear
+- Searching also works within the content of the notes
 
 ---
 
 ## Security
 
-- **AES-256 encryption** — data Firebase pe jaane se pehle encrypt hota hai
-- **Master password kabhi store nahi hota** — sirf RAM mein rehta hai session tak
-- **Firebase Security Rules** — sirf logged-in user apna data dekh sakta hai
-- Koi bhi (Firebase employee bhi) encrypted notes nahi padh sakta bina master password ke
+- **AES-256 encryption** — data is encrypted before being sent to Firebase
+- **Master password is never stored** — it remains only in RAM during your session
+- **Firebase Security Rules** — only the logged-in user can access their data
+- Nobody (not even Firebase employees) can read your encrypted notes without the master password

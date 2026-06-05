@@ -31,6 +31,19 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [unlockedFolders, setUnlockedFolders] = useState([]);
   const [globalPinHash, setGlobalPinHash] = useState(null);
+  const [showGuestAlert, setShowGuestAlert] = useState(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("dismissedGuestAlert") !== "true";
+    }
+    return true;
+  });
+
+  const handleDismissGuestAlert = () => {
+    setShowGuestAlert(false);
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("dismissedGuestAlert", "true");
+    }
+  };
 
   const handleUnlockFolder = (folderId) => {
     setUnlockedFolders((prev) => [...prev, folderId]);
@@ -392,6 +405,20 @@ export default function Home() {
 
           {/* Notes area */}
           <div className="flex-1 overflow-y-auto p-4 lg:p-6">
+            {user?.isAnonymous && showGuestAlert && (
+              <div className="mb-6 p-4 rounded-xl bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-between gap-4 animate-card-enter">
+                <div className="flex-1 text-xs sm:text-sm font-medium">
+                  ⚠️ <strong>Guest Mode:</strong> Your data will not be saved in the cloud; it will only remain on your device.
+                </div>
+                <button
+                  onClick={handleDismissGuestAlert}
+                  className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0 transition-all active:scale-90"
+                  aria-label="Dismiss warning"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
             {selectedFolder && selectedFolder.pinHash && !unlockedFolders.includes(selectedFolder.id) ? (
               <PinLockScreen
                 inline

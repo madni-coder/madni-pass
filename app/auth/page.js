@@ -9,14 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export default function AuthPage() {
-    const { user, signInWithGoogle, signInWithGoogleSelectAccount, forgetLastGoogleEmail, signInWithTestCredentials, loading } = useAuth();
+    const { user, signInWithGoogle, signInWithGoogleSelectAccount, forgetLastGoogleEmail, signInAsGuest, loading } = useAuth();
     const { theme, setTheme, resolvedTheme } = useTheme();
     const router = useRouter();
     const [signingIn, setSigningIn] = useState(false);
     const [error, setError] = useState("");
-    const [loginId, setLoginId] = useState("test");
-    const [password, setPassword] = useState("123");
-    const [showTestForm, setShowTestForm] = useState(false);
+    const [showGuestForm, setShowGuestForm] = useState(false);
+    const [guestName, setGuestName] = useState("");
 
     const [introCompleted, setIntroCompleted] = useState(false);
     const [introFadeOut, setIntroFadeOut] = useState(false);
@@ -46,8 +45,8 @@ export default function AuthPage() {
 
     useEffect(() => {
         const handleBackButton = (e) => {
-            if (showTestForm) {
-                setShowTestForm(false);
+            if (showGuestForm) {
+                setShowGuestForm(false);
             } else {
                 const isTauri = typeof window !== "undefined" && !!window.__TAURI_INTERNALS__;
                 if (isTauri) {
@@ -61,7 +60,7 @@ export default function AuthPage() {
         return () => {
             window.removeEventListener("android-back-button", handleBackButton);
         };
-    }, [showTestForm]);
+    }, [showGuestForm]);
 
     const getFriendlyError = (code) => {
         switch (code) {
@@ -70,7 +69,6 @@ export default function AuthPage() {
             case "auth/network-request-failed": return "Please check your internet connection and try again.";
             case "auth/too-many-requests": return "Too many requests. Please try again later.";
             case "auth/user-disabled": return "This account has been disabled.";
-            case "auth/invalid-test-credentials": return "For test login, use ID `test` and password `123`.";
             default: return "Sign in failed. Please try again.";
         }
     };
@@ -90,18 +88,23 @@ export default function AuthPage() {
         }
     };
 
-    const handleTestLogin = async () => {
+    const handleGuestLogin = async () => {
+        if (!guestName.trim()) return;
         setSigningIn(true);
         setError("");
         try {
-            await signInWithTestCredentials(loginId, password);
+            await signInAsGuest(guestName.trim());
             router.replace("/");
         } catch (e) {
-            setError(getFriendlyError(e.code));
+            console.error("Guest login error:", e);
+            const msg = e?.code ? getFriendlyError(e.code) : (e?.message || String(e));
+            setError(msg);
         } finally {
             setSigningIn(false);
         }
     };
+
+
 
     const showIntro = loading || !introCompleted;
 
@@ -192,74 +195,76 @@ export default function AuthPage() {
                     </div>
                 )}
 
+
+
                 <div className="space-y-3">
                     <div className="flex justify-center">
                         <button
                             type="button"
-                            onClick={() => setShowTestForm((s) => !s)}
-                            aria-expanded={showTestForm}
-                            className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 hover:bg-primary/15"
+                            onClick={() => setShowGuestForm((s) => !s)}
+                            aria-expanded={showGuestForm}
+                            className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 hover:bg-primary/15 active:scale-95"
                         >
                             <span className="relative flex h-1.5 w-1.5">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary"></span>
                             </span>
-                            {showTestForm ? "Hide Test Credentials" : "Use Test Credentials"}
+                            {showGuestForm ? "Go Back to Sign In" : "Continue as Guest"}
                         </button>
                     </div>
 
-                    {showTestForm && (
+                    {showGuestForm && (
                         <div className="space-y-3 p-4 rounded-xl bg-muted/40 border border-border/50 animate-card-enter">
                             <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">User ID</label>
+                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Your Name</label>
                                 <Input
-                                    value={loginId}
-                                    onChange={(e) => setLoginId(e.target.value)}
-                                    placeholder="Enter test user ID"
-                                    autoComplete="username"
-                                    className="h-10 rounded-lg bg-background border-border"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Password</label>
-                                <Input
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Enter password"
-                                    autoComplete="current-password"
+                                    value={guestName}
+                                    onChange={(e) => setGuestName(e.target.value)}
+                                    placeholder="Enter your name"
+                                    className="h-10 rounded-lg bg-background border-border text-foreground"
                                     onKeyDown={(e) => {
-                                        if (e.key === "Enter") handleTestLogin();
+                                        if (e.key === "Enter") handleGuestLogin();
                                     }}
-                                    className="h-10 rounded-lg bg-background border-border"
                                 />
                             </div>
-                            <Button onClick={handleTestLogin} disabled={signingIn} className="w-full h-10 mt-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg shadow-sm">
-                                {signingIn ? "Logging in..." : "Login with Test Account"}
+                            
+                            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-600 dark:text-amber-400 font-medium leading-relaxed">
+                                ⚠️ <strong>Note:</strong> Your data will not be saved in the cloud; it will only remain on your device.
+                            </div>
+                            
+                            <Button 
+                                onClick={handleGuestLogin} 
+                                disabled={signingIn || !guestName.trim()} 
+                                className="w-full h-10 mt-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg shadow-sm disabled:opacity-50"
+                            >
+                                {signingIn ? "Entering..." : "Start as Guest"}
                             </Button>
-                            <p className="text-[10px] text-muted-foreground text-center italic mt-1">Hint: ID test, password 123</p>
                         </div>
                     )}
                 </div>
 
-                <div className="relative py-2">
-                    <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t border-border/60" />
+                {!showGuestForm && (
+                    <div className="relative py-2">
+                        <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t border-border/60" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-card px-3 text-muted-foreground font-semibold tracking-wider text-[10px]">Or</span>
+                        </div>
                     </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-card px-3 text-muted-foreground font-semibold tracking-wider text-[10px]">Or</span>
-                    </div>
-                </div>
+                )}
 
-                <Button
-                    onClick={handleGoogle}
-                    disabled={signingIn}
-                    className="w-full h-12 gap-3 text-sm font-semibold rounded-xl bg-background border border-border hover:bg-muted/80 shadow-sm active:scale-[0.98] transition-all duration-150 text-foreground"
-                    variant="outline"
-                >
-                    <FcGoogle size={20} />
-                    {signingIn ? "Signing in..." : "Continue with Google"}
-                </Button>
+                {!showGuestForm && (
+                    <Button
+                        onClick={handleGoogle}
+                        disabled={signingIn}
+                        className="w-full h-12 gap-3 text-sm font-semibold rounded-xl bg-background border border-border hover:bg-muted/80 shadow-sm active:scale-[0.98] transition-all duration-150 text-foreground"
+                        variant="outline"
+                    >
+                        <FcGoogle size={20} />
+                        {signingIn ? "Signing in..." : "Continue with Google"}
+                    </Button>
+                )}
 
                 <div className="flex justify-between items-center pt-2 border-t border-border/40 text-xs">
                     <button

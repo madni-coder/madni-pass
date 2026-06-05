@@ -4,3 +4,8 @@
 /tauri.build.gradle.kts
 /proguard-tauri.pro
 /tauri.properties
+
+# Release signing keys and configuration
+*.keystore
+*.jks
+key.properties

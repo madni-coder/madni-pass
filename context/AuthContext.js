@@ -13,8 +13,6 @@ import {
 import { auth } from "@/lib/firebase";
 
 const AuthContext = createContext(null);
-const TEST_LOGIN_ID = "test";
-const TEST_LOGIN_PASSWORD = "123";
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
@@ -108,18 +106,19 @@ export function AuthProvider({ children }) {
         try { localStorage.removeItem("lastGoogleEmail"); } catch (e) { }
     };
 
-    const signInWithTestCredentials = async (loginId, password) => {
-        if (loginId.trim() !== TEST_LOGIN_ID || password !== TEST_LOGIN_PASSWORD) {
-            const err = new Error("Invalid test credentials");
-            err.code = "auth/invalid-test-credentials";
-            throw err;
-        }
-
-        return signInAnonymously(auth);
+    const signInAsGuest = async (name) => {
+        const result = await signInAnonymously(auth);
+        const { updateProfile } = await import("firebase/auth");
+        await updateProfile(result.user, { displayName: name });
+        return result;
     };
 
     const logOut = async () => {
         try {
+            if (auth.currentUser?.isAnonymous) {
+                localStorage.removeItem("guest_folders");
+                localStorage.removeItem("guest_notes");
+            }
             // Prevent auto-redirect from firing immediately after logout
             try { sessionStorage.setItem("autoRedirectTried", "1"); } catch (e) { }
             // Forget the saved email so chooser doesn't auto-select next time
@@ -129,7 +128,7 @@ export function AuthProvider({ children }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithGoogleSelectAccount, forgetLastGoogleEmail, signInWithTestCredentials, logOut }}>
+        <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithGoogleSelectAccount, forgetLastGoogleEmail, signInAsGuest, logOut }}>
             {children}
         </AuthContext.Provider>
     );

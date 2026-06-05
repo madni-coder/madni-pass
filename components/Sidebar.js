@@ -316,7 +316,13 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                     <AlertDialogHeader>
                         <AlertDialogTitle>Logout?</AlertDialogTitle>
                         <AlertDialogDescription className="text-muted-foreground">
-                            Kya aap sach mein logout karna chahte hain?
+                            {user?.isAnonymous ? (
+                                <span className="block p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive font-semibold text-xs leading-relaxed">
+                                    ⚠️ <strong>Warning:</strong> You are logged in as a Guest. Logging out will permanently delete all your folders and notes from this device. This action cannot be undone!
+                                </span>
+                            ) : (
+                                "Are you sure you want to logout?"
+                            )}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
