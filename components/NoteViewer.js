@@ -4,7 +4,7 @@ import { createNote, updateNote, updateNotePin, setUserPinHash } from "@/lib/db"
 import { storeImage, getImageSrc } from "@/lib/imageStore";
 import { encrypt } from "@/lib/crypto";
 import { notify } from "@/lib/notify";
-import { FiSearch, FiX, FiChevronUp, FiChevronDown, FiImage, FiLoader, FiCheck, FiMoreHorizontal, FiHash, FiCopy, FiWifiOff, FiArrowLeft, FiTrash2, FiRotateCcw, FiLock, FiUnlock } from "react-icons/fi";
+import { FiSearch, FiX, FiChevronUp, FiChevronDown, FiImage, FiLoader, FiCheck, FiMoreHorizontal, FiHash, FiCopy, FiWifiOff, FiArrowLeft, FiTrash2, FiRotateCcw, FiLock, FiUnlock, FiPlus } from "react-icons/fi";
 import PinLockScreen from "./PinLockScreen";
 import CryptoJS from "crypto-js";
 
@@ -552,7 +552,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                                     <button onClick={() => { handleSum(); setMenuOpen(false); }}
                                         className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-foreground hover:bg-muted transition-colors"
                                     >
-                                        <span className="text-muted-foreground"><FiHash size={13} /></span>Sum Numbers
+                                        <span className="text-muted-foreground"><FiPlus size={13} /></span>Add Numbers
                                     </button>
                                     <div style={{ height: 1, background: "var(--border)", margin: "3px 0" }} />
                                     <button onClick={() => { handleCopy(); setMenuOpen(false); }}
@@ -651,33 +651,57 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                 )}
 
                 {/* Internal search bar */}
-                <div className="flex items-center gap-2 px-5 py-2 border-b border-border/50 bg-card/40">
-                    <FiSearch size={14} className="text-muted-foreground/60 shrink-0" />
-                    <input
-                        ref={srRef}
-                        placeholder="Search in note......"
-                        value={inSearch}
-                        onChange={(e) => { setInSearch(e.target.value); setMatchIdx(0); }}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") { e.shiftKey ? gotoMatch(matchIdx - 1) : gotoMatch(matchIdx + 1); }
-                            if (e.key === "Escape") { setInSearch(""); taRef.current?.focus(); }
-                        }}
-                        className="flex-1 bg-transparent text-sm text-foreground/80 placeholder:text-muted-foreground/50 focus:outline-none"
-                    />
+                <div className="flex items-center justify-between gap-3 px-5 py-2.5 border-b border-border/40 bg-card/30">
+                    <div className="relative flex-1 max-w-md">
+                        <FiSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
+                        <input
+                            ref={srRef}
+                            placeholder="Search in this Note..."
+                            value={inSearch}
+                            onChange={(e) => { setInSearch(e.target.value); setMatchIdx(0); }}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") { e.shiftKey ? gotoMatch(matchIdx - 1) : gotoMatch(matchIdx + 1); }
+                                if (e.key === "Escape") { setInSearch(""); taRef.current?.focus(); }
+                            }}
+                            className="w-full pl-9 pr-8 py-1.5 rounded-lg bg-muted/70 border border-border/40 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all duration-150"
+                        />
+                        {inSearch && (
+                            <button
+                                onClick={() => { setInSearch(""); taRef.current?.focus(); }}
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center rounded-full bg-muted-foreground/10 text-muted-foreground hover:bg-muted-foreground/20 hover:text-foreground text-[10px] transition-all"
+                            >
+                                <FiX size={10} />
+                            </button>
+                        )}
+                    </div>
                     {inSearch && (
-                        <div className="flex items-center gap-1 shrink-0">
-                            <span className={`text-xs min-w-9 text-right ${matches.length === 0 ? "text-red-400" : "text-muted-foreground"}`}>
-                                {matches.length > 0 ? `${matchIdx + 1}/${matches.length}` : "0"}
+                        <div className="flex items-center gap-2 shrink-0">
+                            <span className={`text-[10px] px-2 py-0.5 rounded-md font-semibold font-mono border tracking-wider uppercase transition-all ${
+                                matches.length === 0 
+                                    ? "bg-destructive/10 border-destructive/20 text-destructive-foreground/90" 
+                                    : "bg-primary/10 border-primary/20 text-primary"
+                            }`}>
+                                {matches.length > 0 ? `${matchIdx + 1} of ${matches.length}` : "No matches"}
                             </span>
-                            <button onClick={() => gotoMatch(matchIdx - 1)} disabled={matches.length === 0} className="w-5 h-5 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30">
-                                <FiChevronUp size={14} />
-                            </button>
-                            <button onClick={() => gotoMatch(matchIdx + 1)} disabled={matches.length === 0} className="w-5 h-5 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30">
-                                <FiChevronDown size={14} />
-                            </button>
-                            <button onClick={() => { setInSearch(""); taRef.current?.focus(); }} className="w-5 h-5 flex items-center justify-center text-muted-foreground hover:text-foreground">
-                                <FiX size={12} />
-                            </button>
+                            <div className="flex items-center rounded-lg border border-border bg-muted/50 overflow-hidden shadow-xs">
+                                <button 
+                                    onClick={() => gotoMatch(matchIdx - 1)} 
+                                    disabled={matches.length === 0} 
+                                    className="w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 disabled:opacity-30 transition-all"
+                                    title="Previous match (Shift+Enter)"
+                                >
+                                    <FiChevronUp size={15} />
+                                </button>
+                                <div className="w-px h-3.5 bg-border/80" />
+                                <button 
+                                    onClick={() => gotoMatch(matchIdx + 1)} 
+                                    disabled={matches.length === 0} 
+                                    className="w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 disabled:opacity-30 transition-all"
+                                    title="Next match (Enter)"
+                                >
+                                    <FiChevronDown size={15} />
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>
