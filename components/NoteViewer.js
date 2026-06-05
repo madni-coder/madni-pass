@@ -236,6 +236,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
         document.addEventListener("mousedown", handler);
         return () => document.removeEventListener("mousedown", handler);
     }, [menuOpen]);
+    const titleRef = useRef(null);
     const noteIdRef = useRef(note?.id || null);
     const imagesRef = useRef(images);
     const srRef = useRef(null);
@@ -245,6 +246,14 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
     const saveTimerRef = useRef(null);
     const creatingRef = useRef(false);
     useEffect(() => { imagesRef.current = images; }, [images]);
+
+    useEffect(() => {
+        const el = titleRef.current;
+        if (el) {
+            el.style.height = "auto";
+            el.style.height = `${el.scrollHeight}px`;
+        }
+    }, [title]);
 
     // Close on Esc key
     useEffect(() => {
@@ -532,7 +541,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
             {/* Modal panel */}
             <div style={panelStyle} className="animate-note-open">
                 {/* Title area — accented */}
-                <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b-2 border-primary/60 bg-card/70">
+                <div className="flex items-start gap-3 px-5 pt-4 pb-3 border-b-2 border-primary/60 bg-card/70">
                     <button
                         onClick={onClose}
                         className="flex sm:hidden w-8 h-8 items-center justify-center rounded-lg bg-muted text-foreground hover:bg-muted/80 transition-colors mr-1 shrink-0"
@@ -540,20 +549,29 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                     >
                         <FiArrowLeft size={18} />
                     </button>
-                    <div className="hidden sm:block w-1 h-7 rounded-full bg-primary shrink-0" />
-                    <input
+                    <div className="hidden sm:block w-1 h-7 rounded-full bg-primary shrink-0 mt-0.5" />
+                    <textarea
+                        ref={titleRef}
                         autoFocus={!note?.inBin}
                         placeholder="Note title..."
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                                e.preventDefault();
+                                taRef.current?.focus();
+                            }
+                        }}
                         readOnly={note?.inBin}
-                        className="flex-1 bg-transparent text-foreground text-lg font-bold placeholder:text-muted-foreground/50 focus:outline-none tracking-wide min-w-0"
+                        rows={1}
+                        className="flex-1 bg-transparent text-foreground text-lg font-bold placeholder:text-muted-foreground/50 focus:outline-none tracking-wide min-w-0 resize-none overflow-hidden py-0.5"
+                        style={{
+                            height: "auto",
+                            lineHeight: "1.4",
+                        }}
                     />
-                    {/* Auto-save status + three-dots menu */}
-                    <span className="shrink-0 flex items-center gap-2 text-xs">
-                        {!isOnline && <><FiWifiOff size={12} className="text-yellow-400" /><span className="text-yellow-400">Offline</span></>}
-                        {isOnline && saveStatus === "saving" && <><FiLoader size={12} className="animate-spin text-muted-foreground" /><span className="text-muted-foreground">Saving...</span></>}
-                        {isOnline && saveStatus === "saved" && <><FiCheck size={12} className="text-green-500" /><span className="text-green-500">Saved</span></>}
+                    {/* Three-dots menu */}
+                    <span className="shrink-0 flex items-center gap-2 text-xs h-8">
                         {/* Custom inline menu — avoids z-index portal issues */}
                         <div ref={menuRef} style={{ position: "relative" }}>
                             <button
