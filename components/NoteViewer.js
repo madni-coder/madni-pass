@@ -133,8 +133,8 @@ function CredentialCopyButton({ value, label, top, left, lineHeight }) {
                 zIndex: 10,
             }}
             className={`w-6 h-6 flex items-center justify-center rounded-md border transition-all duration-150 active:scale-95 shadow-sm ${copied
-                    ? "bg-green-500/25 border-green-500 text-green-400 font-bold scale-105"
-                    : "bg-primary/10 border-primary/20 text-primary hover:bg-primary/25 hover:border-primary/40 hover:scale-105"
+                ? "bg-green-500/25 border-green-500 text-green-400 font-bold scale-105"
+                : "bg-primary/10 border-primary/20 text-primary hover:bg-primary/25 hover:border-primary/40 hover:scale-105"
                 }`}
             title={`Copy ${label}`}
         >
@@ -178,12 +178,26 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
             prevNoteIdRef.current = note?.id || null;
             setNotePinHash(note?.pinHash || null);
             setIsUnlocked(!note?.pinHash);
+            setDeleteConfirmIdx(null);
         } else {
             setNotePinHash(note?.pinHash || null);
         }
     }, [note]);
     const [uploading, setUploading] = useState(false);
     const [saveStatus, setSaveStatus] = useState("idle"); // "idle" | "saved"
+    const [deleteConfirmIdx, setDeleteConfirmIdx] = useState(null);
+    const deleteConfirmRef = useRef(null);
+
+    useEffect(() => {
+        if (deleteConfirmIdx === null) return;
+        const handler = (e) => {
+            if (deleteConfirmRef.current && !deleteConfirmRef.current.contains(e.target)) {
+                setDeleteConfirmIdx(null);
+            }
+        };
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, [deleteConfirmIdx]);
     const [noteCreated, setNoteCreated] = useState(!!note?.id); // for showing images row
     const [inSearch, setInSearch] = useState("");
     const [matchIdx, setMatchIdx] = useState(0);
@@ -323,6 +337,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
         const file = e.target.files?.[0];
         if (!file) return;
         if (file.size > 10 * 1024 * 1024) { notify("Image size must be smaller than 10MB", "error"); return; }
+        if (images.length >= 4) { notify("You can upload a maximum of 4 images per note", "error"); return; }
         if (!noteIdRef.current) { notify("Please add a title before attaching an image", "error"); return; }
         setUploading(true);
         try {
@@ -484,7 +499,30 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
 
     return (
         <>
-            <style>{`[data-bd-scroll]::-webkit-scrollbar{display:none}`}</style>
+            <style>{`
+                [data-bd-scroll]::-webkit-scrollbar{display:none}
+                @keyframes tooltip-in-center {
+                    from { opacity: 0; transform: translate(-50%, 4px) scale(0.95); }
+                    to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+                }
+                @keyframes tooltip-in-left {
+                    from { opacity: 0; transform: translate(0, 4px) scale(0.95); }
+                    to { opacity: 1; transform: translate(0, 0) scale(1); }
+                }
+                @keyframes tooltip-in-right {
+                    from { opacity: 0; transform: translate(0, 4px) scale(0.95); }
+                    to { opacity: 1; transform: translate(0, 0) scale(1); }
+                }
+                .animate-tooltip-center {
+                    animation: tooltip-in-center 0.12s cubic-bezier(0, 0, 0.2, 1) forwards;
+                }
+                .animate-tooltip-left {
+                    animation: tooltip-in-left 0.12s cubic-bezier(0, 0, 0.2, 1) forwards;
+                }
+                .animate-tooltip-right {
+                    animation: tooltip-in-right 0.12s cubic-bezier(0, 0, 0.2, 1) forwards;
+                }
+            `}</style>
             {/* Backdrop overlay */}
             <div
                 onClick={onClose}
@@ -540,8 +578,8 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                                                     key={style}
                                                     onClick={() => handleFontStyleChange(style)}
                                                     className={`flex-1 text-center py-1 text-[11px] font-medium rounded-md capitalize transition-all select-none ${fontStyle === style
-                                                            ? "bg-card text-foreground shadow-xs font-semibold"
-                                                            : "text-muted-foreground hover:text-foreground hover:bg-card/30"
+                                                        ? "bg-card text-foreground shadow-xs font-semibold"
+                                                        : "text-muted-foreground hover:text-foreground hover:bg-card/30"
                                                         }`}
                                                 >
                                                     {style}
@@ -676,26 +714,25 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                     </div>
                     {inSearch && (
                         <div className="flex items-center gap-2 shrink-0">
-                            <span className={`text-[10px] px-2 py-0.5 rounded-md font-semibold font-mono border tracking-wider uppercase transition-all ${
-                                matches.length === 0 
-                                    ? "bg-destructive/10 border-destructive/20 text-destructive-foreground/90" 
+                            <span className={`text-[10px] px-2 py-0.5 rounded-md font-semibold font-mono border tracking-wider uppercase transition-all ${matches.length === 0
+                                    ? "bg-destructive/10 border-destructive/20 text-destructive-foreground/90"
                                     : "bg-primary/10 border-primary/20 text-primary"
-                            }`}>
+                                }`}>
                                 {matches.length > 0 ? `${matchIdx + 1} of ${matches.length}` : "No matches"}
                             </span>
                             <div className="flex items-center rounded-lg border border-border bg-muted/50 overflow-hidden shadow-xs">
-                                <button 
-                                    onClick={() => gotoMatch(matchIdx - 1)} 
-                                    disabled={matches.length === 0} 
+                                <button
+                                    onClick={() => gotoMatch(matchIdx - 1)}
+                                    disabled={matches.length === 0}
                                     className="w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 disabled:opacity-30 transition-all"
                                     title="Previous match (Shift+Enter)"
                                 >
                                     <FiChevronUp size={15} />
                                 </button>
                                 <div className="w-px h-3.5 bg-border/80" />
-                                <button 
-                                    onClick={() => gotoMatch(matchIdx + 1)} 
-                                    disabled={matches.length === 0} 
+                                <button
+                                    onClick={() => gotoMatch(matchIdx + 1)}
+                                    disabled={matches.length === 0}
                                     className="w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 disabled:opacity-30 transition-all"
                                     title="Next match (Enter)"
                                 >
@@ -843,23 +880,74 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                 {/* Images row */}
                 {noteCreated && (
                     <div className="border-t border-border px-5 py-3 flex items-center gap-2 flex-wrap">
-                        {displayImages.map((img, idx) => (
-                            <div key={idx} className="relative group shrink-0">
-                                {img.displaySrc ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img src={img.displaySrc} alt={img.name} className="w-14 h-14 object-cover rounded-lg border border-border hover:border-primary transition-colors" />
-                                ) : (
-                                    <div className="w-14 h-14 bg-muted rounded-lg border border-border flex items-center justify-center">
-                                        <FiLoader size={12} className="animate-spin text-muted-foreground/60" />
-                                    </div>
-                                )}
-                                <button onClick={() => handleDeleteImage(img, idx)} className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 rounded-full flex sm:hidden sm:group-hover:flex items-center justify-center">
-                                    <FiX size={10} className="text-white" />
-                                </button>
-                            </div>
-                        ))}
-                        <button onClick={() => fileRef.current?.click()} disabled={uploading}
-                            className="w-14 h-14 border-2 border-dashed border-border rounded-lg flex items-center justify-center text-muted-foreground/60 hover:border-primary hover:text-primary transition-colors shrink-0">
+                        {displayImages.map((img, idx) => {
+                            const isFirst = idx === 0;
+                            const isLast = idx === images.length - 1 && images.length > 1;
+                            const tooltipClass = isFirst ? "animate-tooltip-left" : isLast ? "animate-tooltip-right" : "animate-tooltip-center";
+                            const tooltipStyle = isFirst
+                                ? { position: "absolute", bottom: "100%", left: "0", marginBottom: "8px", zIndex: 50, width: "max-content", minWidth: "90px" }
+                                : isLast
+                                    ? { position: "absolute", bottom: "100%", right: "0", marginBottom: "8px", zIndex: 50, width: "max-content", minWidth: "90px" }
+                                    : { position: "absolute", bottom: "100%", left: "50%", marginBottom: "8px", zIndex: 50, width: "max-content", minWidth: "90px" };
+                            const arrowStyle = isFirst
+                                ? { position: "absolute", top: "100%", left: "28px", transform: "translateX(-50%) rotate(45deg)", marginTop: "-5px", width: "8px", height: "8px", backgroundColor: "var(--popover)", borderRight: "1px solid var(--border)", borderBottom: "1px solid var(--border)" }
+                                : isLast
+                                    ? { position: "absolute", top: "100%", right: "28px", transform: "translateX(50%) rotate(45deg)", marginTop: "-5px", width: "8px", height: "8px", backgroundColor: "var(--popover)", borderRight: "1px solid var(--border)", borderBottom: "1px solid var(--border)" }
+                                    : { position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%) rotate(45deg)", marginTop: "-5px", width: "8px", height: "8px", backgroundColor: "var(--popover)", borderRight: "1px solid var(--border)", borderBottom: "1px solid var(--border)" };
+
+                            return (
+                                <div key={idx} className="relative group shrink-0">
+                                    {img.displaySrc ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img src={img.displaySrc} alt={img.name} className="w-14 h-14 object-cover rounded-lg border border-border hover:border-primary transition-colors" />
+                                    ) : (
+                                        <div className="w-14 h-14 bg-muted rounded-lg border border-border flex items-center justify-center">
+                                            <FiLoader size={12} className="animate-spin text-muted-foreground/60" />
+                                        </div>
+                                    )}
+                                    <button onClick={() => setDeleteConfirmIdx(idx)} className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 rounded-full flex sm:hidden sm:group-hover:flex items-center justify-center cursor-pointer">
+                                        <FiX size={10} className="text-white" />
+                                    </button>
+                                    {deleteConfirmIdx === idx && (
+                                        <div
+                                            ref={deleteConfirmRef}
+                                            style={tooltipStyle}
+                                            className={`bg-popover border border-border rounded-lg shadow-lg p-2 flex flex-col items-center gap-1.5 ${tooltipClass}`}
+                                        >
+                                            <span className="text-[10px] font-semibold text-foreground select-none">Remove?</span>
+                                            <div className="flex gap-1.5 w-full">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteImage(img, idx);
+                                                        setDeleteConfirmIdx(null);
+                                                    }}
+                                                    className="flex-1 py-0.5 px-1.5 rounded bg-red-600 hover:bg-red-500 text-white text-[9px] font-bold transition-all active:scale-95 cursor-pointer"
+                                                >
+                                                    Yes
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setDeleteConfirmIdx(null);
+                                                    }}
+                                                    className="flex-1 py-0.5 px-1.5 rounded bg-muted hover:bg-muted/80 text-muted-foreground text-[9px] font-bold transition-all active:scale-95 border border-border cursor-pointer"
+                                                >
+                                                    No
+                                                </button>
+                                            </div>
+                                            {/* Tiny arrow pointing down */}
+                                            <div style={arrowStyle} />
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                        <button onClick={() => fileRef.current?.click()} disabled={uploading || images.length >= 4}
+                            className={`w-14 h-14 border-2 border-dashed rounded-lg flex items-center justify-center transition-colors shrink-0 ${images.length >= 4
+                                    ? "border-border/40 text-muted-foreground/30 cursor-not-allowed opacity-50"
+                                    : "border-border text-muted-foreground/60 hover:border-primary hover:text-primary"
+                                }`}>
                             {uploading ? <FiLoader size={16} className="animate-spin" /> : <FiImage size={16} />}
                         </button>
                         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />

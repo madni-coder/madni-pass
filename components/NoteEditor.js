@@ -19,6 +19,24 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
     const [uploading, setUploading] = useState(false);
     const [saving, setSaving] = useState(false);
     const fileRef = useRef(null);
+    const [deleteConfirmIdx, setDeleteConfirmIdx] = useState(null);
+    const deleteConfirmRef = useRef(null);
+
+    useEffect(() => {
+        if (deleteConfirmIdx === null) return;
+        const handler = (e) => {
+            if (deleteConfirmRef.current && !deleteConfirmRef.current.contains(e.target)) {
+                setDeleteConfirmIdx(null);
+            }
+        };
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, [deleteConfirmIdx]);
+
+    useEffect(() => {
+        // Reset confirmation when note changes
+        setDeleteConfirmIdx(null);
+    }, [note]);
 
     const handleSave = async () => {
         if (!title.trim()) { notify("Please enter a note title", "error"); return; }
@@ -51,6 +69,7 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
         const file = e.target.files?.[0];
         if (!file) return;
         if (file.size > 10 * 1024 * 1024) { notify("Image size must be smaller than 10MB", "error"); return; }
+        if (images.length >= 4) { notify("You can upload a maximum of 4 images per note", "error"); return; }
         if (isNew) { notify("Please save the note first before attaching an image", "error"); return; }
         setUploading(true);
         try {
@@ -85,6 +104,29 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
     return (
         <Dialog open onOpenChange={onClose}>
             <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-2xl w-full max-h-[90vh] flex flex-col p-0">
+                <style>{`
+                    @keyframes tooltip-in-center {
+                        from { opacity: 0; transform: translate(-50%, 4px) scale(0.95); }
+                        to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+                    }
+                    @keyframes tooltip-in-left {
+                        from { opacity: 0; transform: translate(0, 4px) scale(0.95); }
+                        to { opacity: 1; transform: translate(0, 0) scale(1); }
+                    }
+                    @keyframes tooltip-in-right {
+                        from { opacity: 0; transform: translate(0, 4px) scale(0.95); }
+                        to { opacity: 1; transform: translate(0, 0) scale(1); }
+                    }
+                    .animate-tooltip-center {
+                        animation: tooltip-in-center 0.12s cubic-bezier(0, 0, 0.2, 1) forwards;
+                    }
+                    .animate-tooltip-left {
+                        animation: tooltip-in-left 0.12s cubic-bezier(0, 0, 0.2, 1) forwards;
+                    }
+                    .animate-tooltip-right {
+                        animation: tooltip-in-right 0.12s cubic-bezier(0, 0, 0.2, 1) forwards;
+                    }
+                `}</style>
                 <DialogHeader className="px-6 pt-5 pb-3 border-b border-gray-800">
                     <DialogTitle>{isNew ? "New Note" : "Edit Note"}</DialogTitle>
                 </DialogHeader>
@@ -117,23 +159,74 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
                             <div className="space-y-2">
                                 <Label className="text-sm text-gray-400">Images</Label>
                                 <div className="flex flex-wrap gap-2">
-                                    {displayImages.map((img, idx) => (
-                                        <div key={idx} className="relative group">
-                                            {img.displaySrc ? (
-                                                // eslint-disable-next-line @next/next/no-img-element
-                                                <img src={img.displaySrc} alt={img.name} className="w-24 h-24 object-cover rounded-lg border border-gray-700" />
-                                            ) : (
-                                                <div className="w-24 h-24 bg-gray-800 rounded-lg border border-gray-700 flex items-center justify-center">
-                                                    <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
-                                                </div>
-                                            )}
-                                            <button onClick={() => handleDeleteImage(img, idx)} className="absolute top-1 right-1 w-5 h-5 bg-red-600 rounded-full flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                                                <X className="w-3 h-3 text-white" />
-                                            </button>
-                                        </div>
-                                    ))}
-                                    <button onClick={() => fileRef.current?.click()} disabled={uploading}
-                                        className="w-24 h-24 border-2 border-dashed border-gray-700 rounded-lg flex flex-col items-center justify-center gap-1 text-gray-500 hover:border-indigo-500 hover:text-indigo-400 transition-colors">
+                                    {displayImages.map((img, idx) => {
+                                        const isFirst = idx === 0;
+                                        const isLast = idx === images.length - 1 && images.length > 1;
+                                        const tooltipClass = isFirst ? "animate-tooltip-left" : isLast ? "animate-tooltip-right" : "animate-tooltip-center";
+                                        const tooltipStyle = isFirst
+                                            ? { position: "absolute", bottom: "100%", left: "0", marginBottom: "8px", zIndex: 50, width: "max-content", minWidth: "90px" }
+                                            : isLast
+                                                ? { position: "absolute", bottom: "100%", right: "0", marginBottom: "8px", zIndex: 50, width: "max-content", minWidth: "90px" }
+                                                : { position: "absolute", bottom: "100%", left: "50%", marginBottom: "8px", zIndex: 50, width: "max-content", minWidth: "90px" };
+                                        const arrowStyle = isFirst
+                                            ? { position: "absolute", top: "100%", left: "48px", transform: "translateX(-50%) rotate(45deg)", marginTop: "-5px", width: "8px", height: "8px", backgroundColor: "#1f2937", borderRight: "1px solid #374151", borderBottom: "1px solid #374151" }
+                                            : isLast
+                                                ? { position: "absolute", top: "100%", right: "48px", transform: "translateX(50%) rotate(45deg)", marginTop: "-5px", width: "8px", height: "8px", backgroundColor: "#1f2937", borderRight: "1px solid #374151", borderBottom: "1px solid #374151" }
+                                                : { position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%) rotate(45deg)", marginTop: "-5px", width: "8px", height: "8px", backgroundColor: "#1f2937", borderRight: "1px solid #374151", borderBottom: "1px solid #374151" };
+
+                                        return (
+                                            <div key={idx} className="relative group">
+                                                {img.displaySrc ? (
+                                                    // eslint-disable-next-line @next/next/no-img-element
+                                                    <img src={img.displaySrc} alt={img.name} className="w-24 h-24 object-cover rounded-lg border border-gray-700" />
+                                                ) : (
+                                                    <div className="w-24 h-24 bg-gray-800 rounded-lg border border-gray-700 flex items-center justify-center">
+                                                        <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+                                                    </div>
+                                                )}
+                                                <button onClick={() => setDeleteConfirmIdx(idx)} className="absolute top-1 right-1 w-5 h-5 bg-red-600 rounded-full flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity cursor-pointer">
+                                                    <X className="w-3 h-3 text-white" />
+                                                </button>
+                                                {deleteConfirmIdx === idx && (
+                                                    <div
+                                                        ref={deleteConfirmRef}
+                                                        style={tooltipStyle}
+                                                        className={`bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-2 flex flex-col items-center gap-1.5 ${tooltipClass}`}
+                                                    >
+                                                        <span className="text-[10px] font-semibold text-gray-200 select-none">Remove?</span>
+                                                        <div className="flex gap-1.5 w-full">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDeleteImage(img, idx);
+                                                                    setDeleteConfirmIdx(null);
+                                                                }}
+                                                                className="flex-1 py-0.5 px-1.5 rounded bg-red-600 hover:bg-red-500 text-white text-[9px] font-bold transition-all active:scale-95 cursor-pointer"
+                                                            >
+                                                                Yes
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setDeleteConfirmIdx(null);
+                                                                }}
+                                                                className="flex-1 py-0.5 px-1.5 rounded bg-gray-700 hover:bg-gray-650 text-gray-200 text-[9px] font-bold transition-all active:scale-95 border border-gray-600 cursor-pointer"
+                                                            >
+                                                                No
+                                                            </button>
+                                                        </div>
+                                                        {/* Tiny arrow pointing down */}
+                                                        <div style={arrowStyle} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                    <button onClick={() => fileRef.current?.click()} disabled={uploading || images.length >= 4}
+                                        className={`w-24 h-24 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-1 transition-colors ${images.length >= 4
+                                                ? "border-gray-800 text-gray-600 cursor-not-allowed opacity-50"
+                                                : "border-gray-700 text-gray-500 hover:border-indigo-500 hover:text-indigo-400"
+                                            }`}>
                                         {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><ImagePlus className="w-5 h-5" /><span className="text-xs">Add Image</span></>}
                                     </button>
                                 </div>
