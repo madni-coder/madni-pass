@@ -132,11 +132,10 @@ function CredentialCopyButton({ value, label, top, left, lineHeight }) {
                 pointerEvents: "auto",
                 zIndex: 10,
             }}
-            className={`w-6 h-6 flex items-center justify-center rounded-md border transition-all duration-150 active:scale-95 shadow-sm ${
-                copied
+            className={`w-6 h-6 flex items-center justify-center rounded-md border transition-all duration-150 active:scale-95 shadow-sm ${copied
                     ? "bg-green-500/25 border-green-500 text-green-400 font-bold scale-105"
                     : "bg-primary/10 border-primary/20 text-primary hover:bg-primary/25 hover:border-primary/40 hover:scale-105"
-            }`}
+                }`}
             title={`Copy ${label}`}
         >
             {copied ? <FiCheck size={11} className="text-green-400" /> : <FiCopy size={11} />}
@@ -540,11 +539,10 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                                                 <button
                                                     key={style}
                                                     onClick={() => handleFontStyleChange(style)}
-                                                    className={`flex-1 text-center py-1 text-[11px] font-medium rounded-md capitalize transition-all select-none ${
-                                                        fontStyle === style
+                                                    className={`flex-1 text-center py-1 text-[11px] font-medium rounded-md capitalize transition-all select-none ${fontStyle === style
                                                             ? "bg-card text-foreground shadow-xs font-semibold"
                                                             : "text-muted-foreground hover:text-foreground hover:bg-card/30"
-                                                    }`}
+                                                        }`}
                                                 >
                                                     {style}
                                                 </button>
@@ -564,14 +562,14 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                                     </button>
                                     <div style={{ height: 1, background: "var(--border)", margin: "3px 0" }} />
                                     {notePinHash ? (
-                                        <button 
+                                        <button
                                             onClick={() => { setPinAction("remove"); setMenuOpen(false); }}
                                             className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-foreground hover:bg-muted transition-colors"
                                         >
                                             <span className="text-muted-foreground"><FiUnlock size={13} /></span>Remove Lock
                                         </button>
                                     ) : (
-                                        <button 
+                                        <button
                                             disabled={!noteIdRef.current}
                                             onClick={handleLockNoteClick}
                                             className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-foreground hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-colors"
@@ -757,23 +755,23 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                                 const lineHeight = parseFloat(sharedTextStyle.lineHeight) * parseFloat(sharedTextStyle.fontSize) || 24;
                                 const paddingTop = 16;
                                 const top = paddingTop + cred.lineIndex * lineHeight;
-                                
+
                                 const font = fontStyle === "mono"
                                     ? "13.5px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
                                     : fontStyle === "serif"
                                         ? "15px ui-serif, Georgia, Cambria, serif"
                                         : "15px ui-sans-serif, system-ui, sans-serif";
-                                
+
                                 const linesText = content.split("\n");
                                 const lineText = linesText[cred.lineIndex] || "";
                                 const textWidth = getTextWidth(lineText, font);
-                                
-                                 const paddingLeft = 20;
+
+                                const paddingLeft = 20;
                                 const gap = 18;
                                 let left = paddingLeft + textWidth + gap;
                                 const maxLeft = (taRef.current?.clientWidth || 500) - 32;
                                 left = Math.min(left, maxLeft);
-                                
+
                                 return (
                                     <CredentialCopyButton
                                         key={idx}

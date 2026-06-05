@@ -44,6 +44,25 @@ export default function AuthPage() {
         if (!loading && user) router.replace("/");
     }, [user, loading, router]);
 
+    useEffect(() => {
+        const handleBackButton = (e) => {
+            if (showTestForm) {
+                setShowTestForm(false);
+            } else {
+                const isTauri = typeof window !== "undefined" && !!window.__TAURI_INTERNALS__;
+                if (isTauri) {
+                    import("@tauri-apps/api/core").then(({ invoke }) => {
+                        invoke("exit_app").catch(() => {});
+                    }).catch(() => {});
+                }
+            }
+        };
+        window.addEventListener("android-back-button", handleBackButton);
+        return () => {
+            window.removeEventListener("android-back-button", handleBackButton);
+        };
+    }, [showTestForm]);
+
     const getFriendlyError = (code) => {
         switch (code) {
             case "auth/popup-blocked": return "Browser blocked the popup. Please allow popups and try again.";
@@ -63,7 +82,9 @@ export default function AuthPage() {
             await signInWithGoogle();
             router.replace("/");
         } catch (e) {
-            setError(getFriendlyError(e.code));
+            console.error("Google sign in error:", e);
+            const msg = e?.code ? getFriendlyError(e.code) : (e?.message || String(e));
+            setError(msg);
         } finally {
             setSigningIn(false);
         }

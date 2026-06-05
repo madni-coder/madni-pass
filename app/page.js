@@ -100,6 +100,33 @@ export default function Home() {
     if (!authLoading && !user) router.replace("/auth");
   }, [user, authLoading, router]);
 
+  // Contextual back button handler
+  useEffect(() => {
+    const handleBackButton = (e) => {
+      if (notepadOpen) {
+        setNotepadOpen(false);
+      } else if (mobileOpen) {
+        setMobileOpen(false);
+      } else if (searchQuery) {
+        setSearchQuery("");
+      } else if (selectedFolder || viewingBin) {
+        setSelectedFolder(null);
+        setViewingBin(false);
+      } else {
+        const isTauri = typeof window !== "undefined" && !!window.__TAURI_INTERNALS__;
+        if (isTauri) {
+          import("@tauri-apps/api/core").then(({ invoke }) => {
+            invoke("exit_app").catch(() => {});
+          }).catch(() => {});
+        }
+      }
+    };
+    window.addEventListener("android-back-button", handleBackButton);
+    return () => {
+      window.removeEventListener("android-back-button", handleBackButton);
+    };
+  }, [notepadOpen, mobileOpen, searchQuery, selectedFolder, viewingBin]);
+
   // Load folders once user is known
   useEffect(() => {
     if (!user) return;
@@ -392,7 +419,7 @@ export default function Home() {
                       <FiFileText size={32} className="text-muted-foreground/50" />
                     </div>
                     {searchQuery ? (
-                      <><p className="text-muted-foreground font-medium">No results found</p><p className="text-muted-foreground/60 text-sm mt-1">Nothing matched "{searchQuery}"</p></>
+                      <><p className="text-muted-foreground font-medium">No results found</p><p className="text-muted-foreground/60 text-sm mt-1">Nothing matched &quot;{searchQuery}&quot;</p></>
                     ) : viewingBin ? (
                       <><p className="text-muted-foreground font-medium">Bin is empty</p><p className="text-muted-foreground/60 text-sm mt-1">Deleted notes will appear here</p></>
                     ) : selectedFolder ? (
@@ -506,6 +533,15 @@ function NoteCard({ note, folderName, searchQuery, onClick, onDelete, onRestore,
       <div className="flex items-center justify-between px-4 py-1.5 bg-muted/100">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-[11px] text-foreground font-medium tracking-wide shrink-0">{displayDate}</span>
+          {inBin && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onRestore(note); }}
+              className="w-6 h-6 flex items-center justify-center rounded-lg text-foreground hover:text-green-500 hover:bg-green-500/10 transition-all duration-150 shrink-0"
+              title="Restore"
+            >
+              <FiRotateCcw size={13} strokeWidth={2.8} className="stroke-[2.8px]" />
+            </button>
+          )}
           {folderName && (
             <Badge variant="secondary" className="text-[12px] bg-primary/10 text-primary/70 border border-primary/20 px-3 py-0 h-6 font-medium truncate flex-1">
               {folderName}
@@ -520,13 +556,6 @@ function NoteCard({ note, folderName, searchQuery, onClick, onDelete, onRestore,
         </div>
         {inBin ? (
           <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-            <button
-              onClick={() => onRestore(note)}
-              className="w-6 h-6 flex items-center justify-center rounded-lg text-foreground hover:text-green-500 hover:bg-green-500/10 transition-all duration-150 opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
-              title="Restore"
-            >
-              <FiRotateCcw size={11} />
-            </button>
             <button
               onClick={() => onDelete(note)}
               className="w-6 h-6 flex items-center justify-center rounded-lg text-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-150 opacity-100 lg:opacity-0 lg:group-hover:opacity-100"

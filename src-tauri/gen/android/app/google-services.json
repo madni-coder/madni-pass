@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "504994185739",
+    "project_id": "madni-pass",
+    "storage_bucket": "madni-pass.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:504994185739:android:7b1bce8e83a469baa5fd0e",
+        "android_client_info": {
+          "package_name": "com.madnipass.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "504994185739-bg3bbncjtel7rr79atm6bjnm9o3vpbso.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZlM3VP1t8YHQjT4-IWWRdX6HbFvdz4wM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "504994185739-bg3bbncjtel7rr79atm6bjnm9o3vpbso.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

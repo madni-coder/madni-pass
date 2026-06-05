@@ -193,22 +193,40 @@ export default function PinLockScreen({
                 expiresAt: Date.now() + 5 * 60 * 1000, // 5 mins
             });
 
-            // Call API route
-            const res = await fetch("/api/send-reset-email", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: userEmail, code }),
-            });
+            // Call API route or Tauri command
+            const isTauri = typeof window !== "undefined" && !!window.__TAURI_INTERNALS__;
+            let emailSent = false;
+            let devMode = false;
 
-            const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.error || "Failed to send reset email");
+            if (isTauri) {
+                try {
+                    const { invoke } = await import("@tauri-apps/api/core");
+                    await invoke("send_reset_email", { email: userEmail, code });
+                    emailSent = true;
+                } catch (tauriErr) {
+                    throw new Error(tauriErr || "Failed to send reset email via Tauri");
+                }
+            } else {
+                const res = await fetch("/api/send-reset-email", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: userEmail, code }),
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.error || "Failed to send reset email");
+                }
+                emailSent = true;
+                devMode = !!data.devMode;
             }
 
-            if (data.devMode) {
-                notify("Dev Mode: Code printed to terminal console!");
-            } else {
-                notify("Reset code sent to your email!");
+            if (emailSent) {
+                if (devMode) {
+                    notify("Dev Mode: Code printed to terminal console!");
+                } else {
+                    notify("Reset code sent to your email!");
+                }
             }
 
             setResetPin("");

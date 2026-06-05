@@ -2,10 +2,13 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import {
     signInWithPopup,
+    signInWithRedirect,
+    getRedirectResult,
     GoogleAuthProvider,
     signInAnonymously,
     signOut,
     onAuthStateChanged,
+    signInWithCredential,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
@@ -18,6 +21,18 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // Handle redirect result if we just returned from Google sign-in
+        getRedirectResult(auth)
+            .then((result) => {
+                if (result) {
+                    const email = result?.user?.email;
+                    if (email) localStorage.setItem("lastGoogleEmail", email);
+                }
+            })
+            .catch((error) => {
+                console.error("Redirect auth error:", error);
+            });
+
         const unsubscribe = onAuthStateChanged(auth, (u) => {
             setUser(u);
             setLoading(false);
@@ -28,32 +43,45 @@ export function AuthProvider({ children }) {
     const signInWithGoogle = async (opts = {}) => {
         const { selectAccount = false } = opts;
         const provider = new GoogleAuthProvider();
+
         try {
+            const isMobileTauri = typeof window !== "undefined" &&
+                !!window.__TAURI_INTERNALS__ &&
+                /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+            if (isMobileTauri) {
+                const { signIn } = await import('@choochmeque/tauri-plugin-google-auth-api');
+                const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+                if (!clientId || clientId.includes("YOUR_WEB_CLIENT_ID_HERE")) {
+                    throw new Error("Google Web Client ID is not configured in .env.local (NEXT_PUBLIC_GOOGLE_CLIENT_ID).");
+                }
+
+                const response = await signIn({
+                    clientId,
+                    scopes: ['openid', 'email', 'profile']
+                });
+
+                if (!response || !response.idToken) {
+                    throw new Error("Native Google Sign-In did not return an ID token.");
+                }
+
+                const credential = GoogleAuthProvider.credential(response.idToken);
+                const result = await signInWithCredential(auth, credential);
+                const email = result?.user?.email;
+                if (email) localStorage.setItem("lastGoogleEmail", email);
+                return result;
+            }
+
             const lastEmail = (() => {
                 try { return localStorage.getItem("lastGoogleEmail"); } catch (e) { return null; }
             })();
 
             if (selectAccount) {
                 provider.setCustomParameters({ prompt: "select_account" });
-                const result = await signInWithPopup(auth, provider);
-                const email = result?.user?.email;
-                if (email) localStorage.setItem("lastGoogleEmail", email);
-                return result;
+            } else if (lastEmail) {
+                provider.setCustomParameters({ login_hint: lastEmail });
             }
 
-            if (lastEmail) {
-                provider.setCustomParameters({ login_hint: lastEmail, prompt: "none" });
-                try {
-                    const silentResult = await signInWithPopup(auth, provider);
-                    const email = silentResult?.user?.email;
-                    if (email) localStorage.setItem("lastGoogleEmail", email);
-                    return silentResult;
-                } catch (silentErr) {
-                    // Silent sign-in failed. Fall through to popup below.
-                }
-            }
-
-            provider.setCustomParameters({ login_hint: lastEmail || undefined });
             const result = await signInWithPopup(auth, provider);
             const email = result?.user?.email;
             if (email) localStorage.setItem("lastGoogleEmail", email);
