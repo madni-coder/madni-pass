@@ -14,9 +14,66 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { FiSearch, FiPlus, FiFileText, FiTrash2, FiLoader, FiMenu, FiRotateCcw, FiLock } from "react-icons/fi";
+import { BsPinAngle } from "react-icons/bs";
 import { useTheme } from "next-themes";
 import { notify } from "@/lib/notify";
 import PinLockScreen from "@/components/PinLockScreen";
+
+function updateNoteInLocalCaches(userId, note, action = "upsert") {
+  if (typeof window === "undefined" || !userId) return;
+
+  const allCacheKey = `user_notes_${userId}_all`;
+  try {
+    const allCached = localStorage.getItem(allCacheKey);
+    if (allCached) {
+      let notesList = JSON.parse(allCached);
+      if (action === "upsert") {
+        const exists = notesList.some(n => n.id === note.id);
+        if (exists) {
+          notesList = notesList.map(n => n.id === note.id ? { ...n, ...note } : n);
+        } else {
+          notesList = [note, ...notesList];
+        }
+      } else if (action === "delete") {
+        notesList = notesList.filter(n => n.id !== note.id);
+      } else if (action === "soft_delete") {
+        notesList = notesList.map(n => n.id === note.id ? { ...n, inBin: true, deletedAt: { seconds: Math.floor(Date.now() / 1000) } } : n);
+      } else if (action === "restore") {
+        notesList = notesList.map(n => n.id === note.id ? { ...n, inBin: false, deletedAt: null } : n);
+      }
+      localStorage.setItem(allCacheKey, JSON.stringify(notesList));
+    }
+  } catch (e) {
+    console.error("Failed to update all notes cache", e);
+  }
+
+  if (note.folderId) {
+    const folderCacheKey = `user_notes_${userId}_${note.folderId}`;
+    try {
+      const folderCached = localStorage.getItem(folderCacheKey);
+      if (folderCached) {
+        let notesList = JSON.parse(folderCached);
+        if (action === "upsert") {
+          const exists = notesList.some(n => n.id === note.id);
+          if (exists) {
+            notesList = notesList.map(n => n.id === note.id ? { ...n, ...note } : n);
+          } else {
+            notesList = [note, ...notesList];
+          }
+        } else if (action === "delete") {
+          notesList = notesList.filter(n => n.id !== note.id);
+        } else if (action === "soft_delete") {
+          notesList = notesList.map(n => n.id === note.id ? { ...n, inBin: true, deletedAt: { seconds: Math.floor(Date.now() / 1000) } } : n);
+        } else if (action === "restore") {
+          notesList = notesList.map(n => n.id === note.id ? { ...n, inBin: false, deletedAt: null } : n);
+        }
+        localStorage.setItem(folderCacheKey, JSON.stringify(notesList));
+      }
+    } catch (e) {
+      console.error("Failed to update folder notes cache", e);
+    }
+  }
+}
 
 export default function Home() {
   const { user, loading: authLoading, logOut } = useAuth();
@@ -55,8 +112,30 @@ export default function Home() {
 
   useEffect(() => {
     if (!user) return;
-    getUserPinHash(user.uid).then(setGlobalPinHash).catch(() => {});
+    try {
+      const cachedPin = localStorage.getItem(`user_pin_hash_${user.uid}`);
+      if (cachedPin) {
+        setGlobalPinHash(cachedPin);
+      }
+    } catch (e) {}
+    getUserPinHash(user.uid).then((hash) => {
+      setGlobalPinHash(hash);
+      if (hash) {
+        try { localStorage.setItem(`user_pin_hash_${user.uid}`, hash); } catch (e) {}
+      } else {
+        try { localStorage.removeItem(`user_pin_hash_${user.uid}`); } catch (e) {}
+      }
+    }).catch(() => {});
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    if (globalPinHash) {
+      try { localStorage.setItem(`user_pin_hash_${user.uid}`, globalPinHash); } catch (e) {}
+    } else {
+      try { localStorage.removeItem(`user_pin_hash_${user.uid}`); } catch (e) {}
+    }
+  }, [globalPinHash, user]);
 
   useEffect(() => {
     const handleReset = () => {
@@ -144,8 +223,32 @@ export default function Home() {
   useEffect(() => {
     if (!user) return;
     notesCacheRef.current.clear();
-    getFolders(user.uid).then(setFolders).catch(() => { }).finally(() => setLoading(false));
+
+    try {
+      const cached = localStorage.getItem(`user_folders_${user.uid}`);
+      if (cached) {
+        setFolders(JSON.parse(cached));
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
+    } catch (e) {
+      setLoading(true);
+    }
+
+    getFolders(user.uid).then((fresh) => {
+      setFolders(fresh);
+      try { localStorage.setItem(`user_folders_${user.uid}`, JSON.stringify(fresh)); } catch (e) {}
+    }).catch(() => { }).finally(() => setLoading(false));
   }, [user]);
+
+  // Sync folders changes to localStorage (created, deleted, renamed, locked, unlocked)
+  useEffect(() => {
+    if (!user || loading) return;
+    try {
+      localStorage.setItem(`user_folders_${user.uid}`, JSON.stringify(folders));
+    } catch (e) {}
+  }, [folders, user, loading]);
 
   const loadNotes = useCallback(async () => {
     if (!user) return;
@@ -154,6 +257,14 @@ export default function Home() {
       setNotes(notesCacheRef.current.get(cacheKey));
       return;
     }
+
+    const cacheName = `user_notes_${user.uid}_${selectedFolder?.id || "all"}`;
+    try {
+      const cached = localStorage.getItem(cacheName);
+      if (cached) {
+        setNotes(JSON.parse(cached));
+      }
+    } catch (e) {}
 
     try {
       const raw = selectedFolder
@@ -173,6 +284,9 @@ export default function Home() {
 
       writeNotesCache(selectedFolder, processed);
       setNotes(processed);
+      try {
+        localStorage.setItem(cacheName, JSON.stringify(processed));
+      } catch (e) {}
     } catch { /* ignore */ }
   }, [user, selectedFolder, getNotesCacheKey, writeNotesCache]);
 
@@ -208,6 +322,20 @@ export default function Home() {
     })
     : displayNotes;
 
+  const getTimestampValue = (ts) => {
+    if (!ts) return 0;
+    if (typeof ts === "number") return ts;
+    if (ts.seconds) return ts.seconds * 1000;
+    const d = new Date(ts);
+    return isNaN(d.getTime()) ? 0 : d.getTime();
+  };
+
+  const sortedNotes = [...filteredNotes].sort((a, b) => {
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
+    return getTimestampValue(b.updatedAt || b.createdAt) - getTimestampValue(a.updatedAt || a.createdAt);
+  });
+
   const [newNoteFolderId, setNewNoteFolderId] = useState(null);
 
   const handleNewNote = (folderId = null) => {
@@ -229,6 +357,7 @@ export default function Home() {
       writeNotesCache(selectedFolder, nextNotes);
       return nextNotes;
     });
+    updateNoteInLocalCaches(user.uid, savedNote, "upsert");
     upsertCachedNote(savedNote);
     setActiveNote(savedNote);
   };
@@ -245,6 +374,7 @@ export default function Home() {
           return nextNotes;
         });
         removeCachedNote(noteToDelete.id);
+        updateNoteInLocalCaches(user.uid, noteToDelete, "delete");
         notify("Note permanently deleted");
       } else {
         // Move to Bin
@@ -255,6 +385,7 @@ export default function Home() {
           return nextNotes;
         });
         upsertCachedNote({ ...noteToDelete, inBin: true });
+        updateNoteInLocalCaches(user.uid, noteToDelete, "soft_delete");
         notify("Note moved to Bin");
       }
       if (activeNote?.id === noteToDelete.id) { setNotepadOpen(false); setActiveNote(null); }
@@ -273,6 +404,7 @@ export default function Home() {
         return nextNotes;
       });
       upsertCachedNote({ ...noteToRestore, inBin: false });
+      updateNoteInLocalCaches(user.uid, noteToRestore, "restore");
       if (activeNote?.id === noteToRestore.id) {
         setActiveNote({ ...activeNote, inBin: false });
       }
@@ -295,7 +427,10 @@ export default function Home() {
         writeNotesCache(selectedFolder, nextNotes);
         return nextNotes;
       });
-      binNotes.forEach((n) => removeCachedNote(n.id));
+      binNotes.forEach((n) => {
+        removeCachedNote(n.id);
+        updateNoteInLocalCaches(user.uid, n, "delete");
+      });
       notify("Bin cleared");
     } catch (err) {
       notify("Failed to clear bin: " + err.message, "error");
@@ -457,21 +592,67 @@ export default function Home() {
                   </div>
                 )}
 
-                {filteredNotes.length > 0 && (
-                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-start">
-                    {filteredNotes.map((note) => (
-                      <NoteCard
-                        key={note.id}
-                        note={note}
-                        searchQuery={searchQuery}
-                        onClick={() => handleOpenNote(note)}
-                        onDelete={handleDeleteNote}
-                        onRestore={handleRestoreNote}
-                        inBin={viewingBin || note.inBin}
-                      />
-                    ))}
-                  </div>
-                )}
+                {filteredNotes.length > 0 && (() => {
+                  const pinnedNotes = sortedNotes.filter((n) => n.isPinned);
+                  const otherNotes = sortedNotes.filter((n) => !n.isPinned);
+
+                  if (pinnedNotes.length > 0) {
+                    return (
+                      <div className="space-y-8">
+                        <div>
+                          <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3 select-none">Pinned</div>
+                          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            {pinnedNotes.map((note) => (
+                              <NoteCard
+                                key={note.id}
+                                note={note}
+                                searchQuery={searchQuery}
+                                onClick={() => handleOpenNote(note)}
+                                onDelete={handleDeleteNote}
+                                onRestore={handleRestoreNote}
+                                inBin={viewingBin || note.inBin}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        {otherNotes.length > 0 && (
+                          <div>
+                            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3 select-none">Others</div>
+                            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                              {otherNotes.map((note) => (
+                                <NoteCard
+                                  key={note.id}
+                                  note={note}
+                                  searchQuery={searchQuery}
+                                  onClick={() => handleOpenNote(note)}
+                                  onDelete={handleDeleteNote}
+                                  onRestore={handleRestoreNote}
+                                  inBin={viewingBin || note.inBin}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {sortedNotes.map((note) => (
+                        <NoteCard
+                          key={note.id}
+                          note={note}
+                          searchQuery={searchQuery}
+                          onClick={() => handleOpenNote(note)}
+                          onDelete={handleDeleteNote}
+                          onRestore={handleRestoreNote}
+                          inBin={viewingBin || note.inBin}
+                        />
+                      ))}
+                    </div>
+                  );
+                })()}
               </>
             )}
           </div>
@@ -534,6 +715,7 @@ function NoteCard({ note, folderName, searchQuery, onClick, onDelete, onRestore,
       <div className="flex flex-col gap-2 p-4 flex-1">
         {/* Title */}
         <h3 className="font-semibold text-foreground text-sm leading-snug line-clamp-2 tracking-tight flex items-center gap-1.5">
+          {note.isPinned && <BsPinAngle className="text-primary shrink-0" size={13} />}
           {isLocked && <FiLock className="text-primary shrink-0 animate-pulse" size={13} />}
           {highlight(note.title, searchQuery)}
         </h3>

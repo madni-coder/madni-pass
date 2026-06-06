@@ -1,10 +1,11 @@
 "use client";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { createNote, updateNote, updateNotePin, setUserPinHash } from "@/lib/db";
+import { createNote, updateNote, updateNotePin, setUserPinHash, updateNotePinState } from "@/lib/db";
 import { storeImage, getImageSrc } from "@/lib/imageStore";
 import { encrypt, decrypt } from "@/lib/crypto";
 import { notify } from "@/lib/notify";
 import { FiSearch, FiX, FiChevronUp, FiChevronDown, FiImage, FiLoader, FiCheck, FiMoreHorizontal, FiHash, FiCopy, FiWifiOff, FiArrowLeft, FiTrash2, FiRotateCcw, FiLock, FiUnlock, FiPlus } from "react-icons/fi";
+import { BsPinAngle, BsPinAngleFill } from "react-icons/bs";
 import PinLockScreen from "./PinLockScreen";
 import CryptoJS from "crypto-js";
 
@@ -170,6 +171,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
     const [notePinHash, setNotePinHash] = useState(note?.pinHash || null);
     const [isUnlocked, setIsUnlocked] = useState(!note?.pinHash);
     const [pinAction, setPinAction] = useState(null); // null | 'set' | 'remove'
+    const [noteIsPinned, setNoteIsPinned] = useState(note?.isPinned || false);
 
     const prevNoteIdRef = useRef(note?.id || null);
 
@@ -178,9 +180,11 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
             prevNoteIdRef.current = note?.id || null;
             setNotePinHash(note?.pinHash || null);
             setIsUnlocked(!note?.pinHash);
+            setNoteIsPinned(note?.isPinned || false);
             setDeleteConfirmIdx(null);
         } else {
             setNotePinHash(note?.pinHash || null);
+            setNoteIsPinned(note?.isPinned || false);
         }
     }, [note]);
     const [uploading, setUploading] = useState(false);
@@ -205,17 +209,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef(null);
     const [isOnline, setIsOnline] = useState(typeof window !== "undefined" ? navigator.onLine : true);
-    const [fontStyle, setFontStyle] = useState(() => {
-        if (typeof window !== "undefined") {
-            return localStorage.getItem("note_font_style") || "sans";
-        }
-        return "sans";
-    });
-
-    const handleFontStyleChange = (style) => {
-        setFontStyle(style);
-        localStorage.setItem("note_font_style", style);
-    };
+    const fontStyle = "sans";
 
     const [scrollTop, setScrollTop] = useState(0);
 
@@ -237,7 +231,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
         return () => document.removeEventListener("mousedown", handler);
     }, [menuOpen]);
     const titleRef = useRef(null);
-    const noteIdRef = useRef(note?.id || null);
+    const noteIdRef = useRef(note?.id || "note_" + Date.now() + "_" + Math.random().toString(36).slice(2));
     const imagesRef = useRef(images);
     const srRef = useRef(null);
     const bdRef = useRef(null);
@@ -245,7 +239,57 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
     const fileRef = useRef(null);
     const saveTimerRef = useRef(null);
     const creatingRef = useRef(false);
+
+    // Refs to track dirty state and latest values on unmount
+    const isDirtyRef = useRef(false);
+    const titleRefVal = useRef(title);
+    const contentRefVal = useRef(content);
+    const noteCreatedVal = useRef(noteCreated);
+    const folderIdVal = useRef(folderId);
+    const noteIsPinnedVal = useRef(noteIsPinned);
+
+    useEffect(() => { titleRefVal.current = title; }, [title]);
+    useEffect(() => { contentRefVal.current = content; }, [content]);
+    useEffect(() => { noteCreatedVal.current = noteCreated; }, [noteCreated]);
+    useEffect(() => { folderIdVal.current = folderId; }, [folderId]);
+    useEffect(() => { noteIsPinnedVal.current = noteIsPinned; }, [noteIsPinned]);
+
+    // Mark note as dirty when user edits title or content
+    useEffect(() => {
+        if (note?.inBin) return;
+        if (title !== (note?.title || "") || content !== (note?.content || "")) {
+            isDirtyRef.current = true;
+        }
+    }, [title, content, note]);
+
     useEffect(() => { imagesRef.current = images; }, [images]);
+
+    // Save note on unmount if it is dirty (e.g. user closes/transitions away immediately)
+    useEffect(() => {
+        return () => {
+            const finalTitle = titleRefVal.current;
+            const finalContent = contentRefVal.current;
+            if (note?.inBin || !finalTitle.trim() || !isDirtyRef.current) return;
+
+            const master = userId;
+            const encTitle = encrypt(finalTitle.trim(), master);
+            const encContent = encrypt(finalContent, master);
+
+            if (!noteCreatedVal.current) {
+                // Instantly update parent UI and local cache
+                onSave({ id: noteIdRef.current, title: finalTitle.trim(), content: finalContent, images: imagesRef.current, pinHash: notePinHash, isPinned: noteIsPinnedVal.current });
+                // Asynchronously save to cloud
+                createNote(userId, folderIdVal.current ?? null, encTitle, encContent, noteIdRef.current)
+                    .catch(err => console.error("Cloud save on unmount failed:", err));
+            } else {
+                // Instantly update parent UI and local cache
+                onSave({ id: noteIdRef.current, title: finalTitle.trim(), content: finalContent, images: imagesRef.current, pinHash: notePinHash, isPinned: noteIsPinnedVal.current });
+                // Asynchronously save to cloud
+                updateNote(noteIdRef.current, encTitle, encContent, imagesRef.current)
+                    .catch(err => console.error("Cloud save on unmount failed:", err));
+            }
+        };
+    }, [onSave, userId, note?.inBin, notePinHash]);
 
     useEffect(() => {
         const el = titleRef.current;
@@ -310,17 +354,17 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
         saveTimerRef.current = setTimeout(async () => {
             try {
                 // Create note if it doesn't exist yet
-                if (!noteIdRef.current) {
+                if (!noteCreated) {
                     if (creatingRef.current) return;
                     creatingRef.current = true;
                     try {
                         const master = userId;
                         const encTitle = encrypt(title.trim(), master);
                         const encContent = encrypt(content, master);
-                        const id = await createNote(userId, folderId ?? null, encTitle, encContent);
+                        const id = await createNote(userId, folderId ?? null, encTitle, encContent, noteIdRef.current);
                         noteIdRef.current = id;
                         setNoteCreated(true);
-                        onSave({ id, title: title.trim(), content, images: [], pinHash: notePinHash });
+                        onSave({ id, title: title.trim(), content, images: [], pinHash: notePinHash, isPinned: noteIsPinnedVal.current });
                     } finally {
                         creatingRef.current = false;
                     }
@@ -329,8 +373,9 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                     const encTitle = encrypt(title.trim(), master);
                     const encContent = encrypt(content, master);
                     await updateNote(noteIdRef.current, encTitle, encContent, imagesRef.current);
-                    onSave({ id: noteIdRef.current, title: title.trim(), content, images: imagesRef.current, pinHash: notePinHash });
+                    onSave({ id: noteIdRef.current, title: title.trim(), content, images: imagesRef.current, pinHash: notePinHash, isPinned: noteIsPinnedVal.current });
                 }
+                isDirtyRef.current = false;
                 setSaveStatus("saved");
                 setTimeout(() => setSaveStatus("idle"), 2000);
             } catch (err) {
@@ -347,7 +392,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
         if (!file) return;
         if (file.size > 10 * 1024 * 1024) { notify("Image size must be smaller than 10MB", "error"); return; }
         if (images.length >= 4) { notify("You can upload a maximum of 4 images per note", "error"); return; }
-        if (!noteIdRef.current) { notify("Please add a title before attaching an image", "error"); return; }
+        if (!noteCreated) { notify("Please add a title before attaching an image", "error"); return; }
         setUploading(true);
         try {
             const master = userId;
@@ -358,6 +403,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
             const encContent = encrypt(content, master);
             await updateNote(noteIdRef.current, encTitle, encContent, newImgs);
             onSave({ id: noteIdRef.current, title, content, images: newImgs, pinHash: notePinHash });
+            isDirtyRef.current = false;
             notify("Image attached!");
         } catch (err) { notify("Failed to upload image: " + (err?.message || err), "error"); }
         finally { setUploading(false); e.target.value = ""; }
@@ -378,12 +424,13 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
     const handleDeleteImage = async (img, idx) => {
         const newImgs = images.filter((_, i) => i !== idx);
         setImages(newImgs);
-        if (noteIdRef.current) {
+        if (noteCreated) {
             const master = userId;
             const encTitle = encrypt(title, master);
             const encContent = encrypt(content, master);
             await updateNote(noteIdRef.current, encTitle, encContent, newImgs);
             onSave({ id: noteIdRef.current, title, content, images: newImgs, pinHash: notePinHash });
+            isDirtyRef.current = false;
         }
         notify("Image removed");
     };
@@ -441,7 +488,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
 
     const handleLockNoteClick = async () => {
         setMenuOpen(false);
-        if (!noteIdRef.current) return;
+        if (!noteCreated) return;
         if (globalPinHash) {
             try {
                 await updateNotePin(noteIdRef.current, true);
@@ -459,6 +506,27 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
             }
         } else {
             setPinAction("set");
+        }
+    };
+
+    const handleTogglePin = async () => {
+        if (!noteIdRef.current) return;
+        const newPinnedState = !noteIsPinned;
+        setNoteIsPinned(newPinnedState);
+        try {
+            await updateNotePinState(noteIdRef.current, newPinnedState);
+            onSave({
+                id: noteIdRef.current,
+                title,
+                content,
+                images,
+                pinHash: notePinHash,
+                isPinned: newPinnedState
+            });
+            notify(newPinnedState ? "Note pinned to top!" : "Note unpinned!");
+        } catch (err) {
+            notify("Failed to update pin: " + err.message, "error");
+            setNoteIsPinned(!newPinnedState);
         }
     };
 
@@ -595,33 +663,25 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                                     borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
                                     padding: "4px 0",
                                 }}>
-                                    <div className="px-3 py-2 border-b border-border">
-                                        <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Typography</div>
-                                        <div className="flex bg-muted/60 p-0.5 rounded-lg border border-border/40">
-                                            {["sans", "serif", "mono"].map((style) => (
-                                                <button
-                                                    key={style}
-                                                    onClick={() => handleFontStyleChange(style)}
-                                                    className={`flex-1 text-center py-1 text-[11px] font-medium rounded-md capitalize transition-all select-none ${fontStyle === style
-                                                        ? "bg-card text-foreground shadow-xs font-semibold"
-                                                        : "text-muted-foreground hover:text-foreground hover:bg-card/30"
-                                                        }`}
-                                                >
-                                                    {style}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
                                     <button onClick={() => { handleSum(); setMenuOpen(false); }}
-                                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-foreground hover:bg-muted transition-colors"
+                                        className="flex items-center gap-2.5 mx-2 my-1.5 px-3 py-2 text-sm text-left rounded-md border border-primary/25 bg-primary/10 text-primary hover:bg-primary/20 transition-all duration-150 active:scale-95 font-semibold"
                                     >
-                                        <span className="text-muted-foreground"><FiPlus size={13} /></span>Add Numbers
+                                        <span><FiPlus size={13} className="text-primary" /></span>Add Numbers
                                     </button>
                                     <div style={{ height: 1, background: "var(--border)", margin: "3px 0" }} />
                                     <button onClick={() => { handleCopy(); setMenuOpen(false); }}
                                         className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-foreground hover:bg-muted transition-colors"
                                     >
                                         <span className="text-muted-foreground"><FiCopy size={13} /></span>Copy Note
+                                    </button>
+                                    <div style={{ height: 1, background: "var(--border)", margin: "3px 0" }} />
+                                    <button onClick={() => { handleTogglePin(); setMenuOpen(false); }}
+                                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-foreground hover:bg-muted transition-colors"
+                                    >
+                                        <span className="text-muted-foreground">
+                                            {noteIsPinned ? <BsPinAngleFill size={13} className="text-primary" /> : <BsPinAngle size={13} />}
+                                        </span>
+                                        {noteIsPinned ? "Unpin Note" : "Pin Note"}
                                     </button>
                                     <div style={{ height: 1, background: "var(--border)", margin: "3px 0" }} />
                                     {notePinHash ? (
@@ -633,10 +693,10 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                                         </button>
                                     ) : (
                                         <button
-                                            disabled={!noteIdRef.current}
+                                            disabled={!noteCreated}
                                             onClick={handleLockNoteClick}
                                             className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-foreground hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-colors"
-                                            title={!noteIdRef.current ? "Save note first to lock" : "Lock this note"}
+                                            title={!noteCreated ? "Save note first to lock" : "Lock this note"}
                                         >
                                             <span className="text-muted-foreground"><FiLock size={13} /></span>Lock Note
                                         </button>
@@ -740,8 +800,8 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                     {inSearch && (
                         <div className="flex items-center gap-2 shrink-0">
                             <span className={`text-[10px] px-2 py-0.5 rounded-md font-semibold font-mono border tracking-wider uppercase transition-all ${matches.length === 0
-                                    ? "bg-destructive/10 border-destructive/20 text-destructive-foreground/90"
-                                    : "bg-primary/10 border-primary/20 text-primary"
+                                ? "bg-destructive/10 border-destructive/20 text-destructive-foreground/90"
+                                : "bg-primary/10 border-primary/20 text-primary"
                                 }`}>
                                 {matches.length > 0 ? `${matchIdx + 1} of ${matches.length}` : "No matches"}
                             </span>
@@ -970,8 +1030,8 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                         })}
                         <button onClick={() => fileRef.current?.click()} disabled={uploading || images.length >= 4}
                             className={`w-14 h-14 border-2 border-dashed rounded-lg flex items-center justify-center transition-colors shrink-0 ${images.length >= 4
-                                    ? "border-border/40 text-muted-foreground/30 cursor-not-allowed opacity-50"
-                                    : "border-border text-muted-foreground/60 hover:border-primary hover:text-primary"
+                                ? "border-border/40 text-muted-foreground/30 cursor-not-allowed opacity-50"
+                                : "border-border text-muted-foreground/60 hover:border-primary hover:text-primary"
                                 }`}>
                             {uploading ? <FiLoader size={16} className="animate-spin" /> : <FiImage size={16} />}
                         </button>

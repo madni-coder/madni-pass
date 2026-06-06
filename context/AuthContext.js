@@ -115,9 +115,21 @@ export function AuthProvider({ children }) {
 
     const logOut = async () => {
         try {
+            const uid = auth.currentUser?.uid;
             if (auth.currentUser?.isAnonymous) {
                 localStorage.removeItem("guest_folders");
                 localStorage.removeItem("guest_notes");
+            } else if (uid) {
+                try {
+                    localStorage.removeItem(`user_folders_${uid}`);
+                    localStorage.removeItem(`user_pin_hash_${uid}`);
+                    for (let i = localStorage.length - 1; i >= 0; i--) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith(`user_notes_${uid}_`)) {
+                            localStorage.removeItem(key);
+                        }
+                    }
+                } catch (e) { }
             }
             // Prevent auto-redirect from firing immediately after logout
             try { sessionStorage.setItem("autoRedirectTried", "1"); } catch (e) { }
