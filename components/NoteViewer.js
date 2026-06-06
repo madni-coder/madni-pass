@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { createNote, updateNote, updateNotePin, setUserPinHash } from "@/lib/db";
 import { storeImage, getImageSrc } from "@/lib/imageStore";
-import { encrypt } from "@/lib/crypto";
+import { encrypt, decrypt } from "@/lib/crypto";
 import { notify } from "@/lib/notify";
 import { FiSearch, FiX, FiChevronUp, FiChevronDown, FiImage, FiLoader, FiCheck, FiMoreHorizontal, FiHash, FiCopy, FiWifiOff, FiArrowLeft, FiTrash2, FiRotateCcw, FiLock, FiUnlock, FiPlus } from "react-icons/fi";
 import PinLockScreen from "./PinLockScreen";
@@ -365,8 +365,15 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
 
     const displayImages = useMemo(() => {
         const master = userId;
-        return images.map(img => ({ ...img, displaySrc: getImageSrc(img, master) }));
-    }, [images]);
+        return images.map(img => {
+            let name = img.name;
+            if (img.name) {
+                const dec = decrypt(img.name, master);
+                if (dec) name = dec;
+            }
+            return { ...img, name, displaySrc: getImageSrc(img, master) };
+        });
+    }, [images, userId]);
 
     const handleDeleteImage = async (img, idx) => {
         const newImgs = images.filter((_, i) => i !== idx);

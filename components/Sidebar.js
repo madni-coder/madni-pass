@@ -85,7 +85,7 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
 
     const handleRename = async () => {
         if (!renameName.trim()) return;
-        await updateFolder(renameTarget.id, renameName.trim());
+        await updateFolder(userId, renameTarget.id, renameName.trim());
         setFolders((prev) =>
             prev.map((f) => (f.id === renameTarget.id ? { ...f, name: renameName.trim() } : f))
         );

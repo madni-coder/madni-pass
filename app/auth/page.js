@@ -2,6 +2,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useTheme } from "next-themes";
 import { FcGoogle } from "react-icons/fc";
 import { FiSun, FiMoon } from "react-icons/fi";
@@ -281,6 +282,13 @@ export default function AuthPage() {
                     >
                         Forget saved account
                     </button>
+                </div>
+
+                <div className="text-center pt-2 text-[10px] text-muted-foreground/60 border-t border-border/20">
+                    By using Lazy Notes, you agree to our{" "}
+                    <Link href="/privacy" className="text-primary hover:underline font-semibold transition-all">
+                        Privacy Policy
+                    </Link>
                 </div>
             </div>
         </div>

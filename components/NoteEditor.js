@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { createNote, updateNoteData } from "@/lib/storage";
-import { encrypt } from "@/lib/crypto";
+import { encrypt, decrypt } from "@/lib/crypto";
 import { storeImage, getImageSrc } from "@/lib/imageStore";
 import { notify } from "@/lib/notify";
 import { Save, X, ImagePlus, Loader2 } from "lucide-react";
@@ -91,7 +91,14 @@ export default function NoteEditor({ note, folderId, onSave, onClose }) {
     const displayImages = useMemo(() => {
         let master = null;
         try { master = sessionStorage.getItem("masterPassword"); } catch { }
-        return images.map(img => ({ ...img, displaySrc: getImageSrc(img, master) }));
+        return images.map(img => {
+            let name = img.name;
+            if (img.name) {
+                const dec = decrypt(img.name, master);
+                if (dec) name = dec;
+            }
+            return { ...img, name, displaySrc: getImageSrc(img, master) };
+        });
     }, [images]);
 
     const handleDeleteImage = async (img, idx) => {
