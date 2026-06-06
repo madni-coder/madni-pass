@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FiFolder, FiPlus, FiMoreHorizontal, FiEdit2, FiTrash2, FiLock, FiUnlock, FiMenu, FiX, FiSun, FiMoon } from "react-icons/fi";
+import { FiFolder, FiPlus, FiMoreHorizontal, FiEdit2, FiTrash2, FiLock, FiUnlock, FiMenu, FiX, FiSun, FiMoon, FiSearch } from "react-icons/fi";
 import { BiFolderOpen } from "react-icons/bi";
 import { FaPowerOff } from "react-icons/fa";
 import { createFolder, updateFolder, deleteFolder, updateFolderPin, setUserPinHash } from "@/lib/db";
@@ -34,6 +34,26 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
     const [logoutConfirm, setLogoutConfirm] = useState(false);
     const [pinAction, setPinAction] = useState(null); // null | { folder, mode: 'set' | 'remove' | 'verify' }
     const [pendingAction, setPendingAction] = useState(null); // null | { folder, type: 'rename' | 'delete' }
+    const [folderSearchQuery, setFolderSearchQuery] = useState("");
+
+    const filteredFolders = folders.filter((folder) =>
+        folder.name.toLowerCase().includes(folderSearchQuery.toLowerCase())
+    );
+
+    const highlightText = (text, highlight) => {
+        if (!highlight.trim()) return text;
+        const regex = new RegExp(`(${highlight.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi');
+        const parts = text.split(regex);
+        return parts.map((part, i) =>
+            regex.test(part) ? (
+                <mark key={i} className="bg-primary/25 text-foreground px-0.5 rounded font-semibold">
+                    {part}
+                </mark>
+            ) : (
+                part
+            )
+        );
+    };
 
     const handleLockFolderClick = async (folder) => {
         if (globalPinHash) {
@@ -105,7 +125,7 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
         }
     };
 
-    const SidebarContent = () => (
+    const renderSidebarContent = () => (
         <div className="flex flex-col h-full">
             <div className="px-4 py-5 border-b border-border">
                 <div className="flex items-center gap-4">
@@ -132,17 +152,39 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                 </button>
             </div>
 
-            <ScrollArea className="flex-1 px-2">
-                <button
-                    onClick={() => { onSelectFolder(null); setMobileOpen(false); }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors mb-1 ${!selectedFolder && !viewingBin ? "bg-primary text-primary-foreground font-semibold" : "text-foreground hover:bg-muted"
-                        }`}
-                >
-                    <BiFolderOpen size={16} className="shrink-0" />
-                    <span className="truncate">All Notes</span>
-                </button>
+            <div className="px-3 pb-2 shrink-0">
+                <div className="relative">
+                    <FiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Search folders..."
+                        value={folderSearchQuery}
+                        onChange={(e) => setFolderSearchQuery(e.target.value)}
+                        className="pl-8 pr-8 h-9 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground/60 text-xs rounded-lg focus-visible:ring-1 focus-visible:ring-primary"
+                    />
+                    {folderSearchQuery && (
+                        <button
+                            onClick={() => setFolderSearchQuery("")}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
+                        >
+                            <FiX size={14} />
+                        </button>
+                    )}
+                </div>
+            </div>
 
-                {folders.map((folder) => {
+            <ScrollArea className="flex-1 px-2">
+                {!folderSearchQuery && (
+                    <button
+                        onClick={() => { onSelectFolder(null); setMobileOpen(false); }}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors mb-1 ${!selectedFolder && !viewingBin ? "bg-primary text-primary-foreground font-semibold" : "text-foreground hover:bg-muted"
+                            }`}
+                    >
+                        <BiFolderOpen size={16} className="shrink-0" />
+                        <span className="truncate">All Notes</span>
+                    </button>
+                )}
+
+                {filteredFolders.map((folder) => {
                     const isFolderLocked = folder.pinHash && !unlockedFolders.includes(folder.id);
                     return (
                         <div
@@ -163,7 +205,7 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                                 ) : (
                                     <FiFolder size={16} className="shrink-0" />
                                 )}
-                                <span className="truncate">{folder.name}</span>
+                                <span className="truncate">{highlightText(folder.name, folderSearchQuery)}</span>
                             </button>
                             <DropdownMenu>
                                 <DropdownMenuTrigger
@@ -230,6 +272,12 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                     </div>
                 )}
 
+                {folders.length > 0 && filteredFolders.length === 0 && (
+                    <p className="text-xs text-muted-foreground/60 text-center py-6">
+                        No matching folders found
+                    </p>
+                )}
+
                 {folders.length === 0 && !showNewFolder && (
                     <p className="text-xs text-muted-foreground/60 text-center py-6">
                         No folders yet.<br />Press + to create one
@@ -286,12 +334,12 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                     <button onClick={() => setMobileOpen(false)} className="absolute top-4 right-3 text-muted-foreground hover:text-foreground">
                         <FiX size={20} />
                     </button>
-                    <SidebarContent />
+                    {renderSidebarContent()}
                 </div>
             </div>
 
             <div className="hidden lg:flex flex-col w-64 bg-card border-r border-border h-screen shrink-0">
-                <SidebarContent />
+                {renderSidebarContent()}
             </div>
 
             <Dialog open={!!renameTarget} onOpenChange={() => setRenameTarget(null)}>
