@@ -52,8 +52,8 @@ export default function AuthPage() {
                 const isTauri = typeof window !== "undefined" && !!window.__TAURI_INTERNALS__;
                 if (isTauri) {
                     import("@tauri-apps/api/core").then(({ invoke }) => {
-                        invoke("exit_app").catch(() => {});
-                    }).catch(() => {});
+                        invoke("exit_app").catch(() => { });
+                    }).catch(() => { });
                 }
             }
         };
@@ -115,7 +115,7 @@ export default function AuthPage() {
                 {mounted && (
                     <button
                         onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                        className="fixed top-6 right-6 z-50 w-10 h-10 flex items-center justify-center rounded-xl bg-card border border-border/80 text-foreground hover:bg-muted/80 shadow-md active:scale-95 transition-all duration-150"
+                        className="fixed top-[calc(1.5rem+env(safe-area-inset-top,0px))] right-6 z-50 w-10 h-10 flex items-center justify-center rounded-xl bg-card border border-border/80 text-foreground hover:bg-muted/80 shadow-md active:scale-95 transition-all duration-150"
                         aria-label="Toggle Theme"
                     >
                         {theme === "dark" ? <FiSun size={18} className="text-yellow-400" /> : <FiMoon size={18} className="text-slate-700" />}
@@ -160,7 +160,7 @@ export default function AuthPage() {
             {mounted && (
                 <button
                     onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                    className="fixed top-6 right-6 z-50 w-10 h-10 flex items-center justify-center rounded-xl bg-card border border-border/80 text-foreground hover:bg-muted/80 shadow-md active:scale-95 transition-all duration-150"
+                    className="fixed top-[calc(1.5rem+env(safe-area-inset-top,0px))] right-6 z-50 w-10 h-10 flex items-center justify-center rounded-xl bg-card border border-border/80 text-foreground hover:bg-muted/80 shadow-md active:scale-95 transition-all duration-150"
                     aria-label="Toggle Theme"
                 >
                     {theme === "dark" ? <FiSun size={18} className="text-yellow-400" /> : <FiMoon size={18} className="text-slate-700" />}
@@ -228,14 +228,14 @@ export default function AuthPage() {
                                     }}
                                 />
                             </div>
-                            
+
                             <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-600 dark:text-amber-400 font-medium leading-relaxed">
                                 ⚠️ <strong>Note:</strong> Your data will not be saved in the cloud; it will only remain on your device.
                             </div>
-                            
-                            <Button 
-                                onClick={handleGuestLogin} 
-                                disabled={signingIn || !guestName.trim()} 
+
+                            <Button
+                                onClick={handleGuestLogin}
+                                disabled={signingIn || !guestName.trim()}
                                 className="w-full h-10 mt-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg shadow-sm disabled:opacity-50"
                             >
                                 {signingIn ? "Entering..." : "Start as Guest"}
@@ -275,13 +275,7 @@ export default function AuthPage() {
                     >
                         Use different account
                     </button>
-                    <button
-                        type="button"
-                        onClick={() => { forgetLastGoogleEmail(); }}
-                        className="text-muted-foreground hover:text-foreground transition-all"
-                    >
-                        Forget saved account
-                    </button>
+                   
                 </div>
 
                 <div className="text-center pt-2 text-[10px] text-muted-foreground/60 border-t border-border/20">

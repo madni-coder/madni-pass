@@ -282,7 +282,7 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                     onClick={() => setMobileOpen(false)}
                 />
 
-                <div className={`relative w-64 bg-card border-r border-border h-full flex flex-col z-50 transform transition-transform duration-300 ${mobileOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none'}`}>
+                <div className={`relative w-64 bg-card border-r border-border h-full flex flex-col z-50 pt-[env(safe-area-inset-top,0px)] transform transition-transform duration-300 ${mobileOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none'}`}>
                     <button onClick={() => setMobileOpen(false)} className="absolute top-4 right-3 text-muted-foreground hover:text-foreground">
                         <FiX size={20} />
                     </button>

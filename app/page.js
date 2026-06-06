@@ -332,7 +332,7 @@ export default function Home() {
 
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Top Bar */}
-          <div className="flex items-center justify-between gap-4 px-4 lg:px-8 py-5 lg:py-6 border-b border-border bg-card/50">
+          <div className="flex items-center justify-between gap-4 px-4 lg:px-8 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-5 lg:pt-6 lg:pb-6 border-b border-border bg-card/50">
             <div className="flex items-center gap-3 flex-1 min-w-0">
               {/* Mobile: icons-only (menu handled by Sidebar) and search toggle */}
               <div className="lg:hidden flex items-center gap-3 flex-1">

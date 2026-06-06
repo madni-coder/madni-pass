@@ -548,7 +548,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
             {/* Modal panel */}
             <div style={panelStyle} className="animate-note-open">
                 {/* Title area — accented */}
-                <div className="flex items-start gap-3 px-5 pt-4 pb-3 border-b-2 border-primary/60 bg-card/70">
+                <div className="flex items-start gap-3 px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] sm:pt-4 pb-3 border-b-2 border-primary/60 bg-card/70">
                     <button
                         onClick={onClose}
                         className="flex sm:hidden w-8 h-8 items-center justify-center rounded-lg bg-muted text-foreground hover:bg-muted/80 transition-colors mr-1 shrink-0"
@@ -817,7 +817,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                             overflowY: "auto",
                             willChange: "scroll-position",
                         }}
-                        placeholder="Write your credentials here..."
+                        placeholder="Write your notes here..."
                         spellCheck={false}
                     />
                     {/* Floating inline copy buttons layer */}
