@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "tauri": "tauri",
-    "android:build": "tauri android build --apk --target aarch64 --ci"
+    "android:build": "tauri android build --apk --target aarch64 --ci",
+    "ios": "tauri ios"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

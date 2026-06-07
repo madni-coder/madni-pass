@@ -1,12 +1,12 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Lazy Notes",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "identifier": "com.lazynote.webiste",
   "build": {
     "frontendDist": "../out",
-    "devUrl": "https://lazynote.website",
-    "beforeDevCommand": "npm run dev",
+    "devUrl": null,
+    "beforeDevCommand": null,
     "beforeBuildCommand": "npm run build"
   },
   "app": {
@@ -36,6 +36,9 @@
     ],
     "android": {
       "debugApplicationIdSuffix": ".debug"
+    },
+    "iOS": {
+      "developmentTeam": "D2TWM3W54N"
     }
   }
 }
