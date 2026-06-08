@@ -138,23 +138,23 @@ export default function Home() {
           setGlobalPinHash(cachedPin);
         });
       }
-    } catch (e) {}
+    } catch (e) { }
     getUserPinHash(user.uid).then((hash) => {
       setGlobalPinHash(hash);
       if (hash) {
-        try { localStorage.setItem(`user_pin_hash_${user.uid}`, hash); } catch (e) {}
+        try { localStorage.setItem(`user_pin_hash_${user.uid}`, hash); } catch (e) { }
       } else {
-        try { localStorage.removeItem(`user_pin_hash_${user.uid}`); } catch (e) {}
+        try { localStorage.removeItem(`user_pin_hash_${user.uid}`); } catch (e) { }
       }
-    }).catch(() => {});
+    }).catch(() => { });
   }, [user]);
 
   useEffect(() => {
     if (!user) return;
     if (globalPinHash) {
-      try { localStorage.setItem(`user_pin_hash_${user.uid}`, globalPinHash); } catch (e) {}
+      try { localStorage.setItem(`user_pin_hash_${user.uid}`, globalPinHash); } catch (e) { }
     } else {
-      try { localStorage.removeItem(`user_pin_hash_${user.uid}`); } catch (e) {}
+      try { localStorage.removeItem(`user_pin_hash_${user.uid}`); } catch (e) { }
     }
   }, [globalPinHash, user]);
 
@@ -229,8 +229,8 @@ export default function Home() {
         const isTauri = typeof window !== "undefined" && !!window.__TAURI_INTERNALS__;
         if (isTauri) {
           import("@tauri-apps/api/core").then(({ invoke }) => {
-            invoke("exit_app").catch(() => {});
-          }).catch(() => {});
+            invoke("exit_app").catch(() => { });
+          }).catch(() => { });
         }
       }
     };
@@ -262,7 +262,7 @@ export default function Home() {
 
     getFolders(user.uid).then((fresh) => {
       setFolders(fresh);
-      try { localStorage.setItem(`user_folders_${user.uid}`, JSON.stringify(fresh)); } catch (e) {}
+      try { localStorage.setItem(`user_folders_${user.uid}`, JSON.stringify(fresh)); } catch (e) { }
     }).catch(() => { }).finally(() => setLoading(false));
   }, [user]);
 
@@ -271,7 +271,7 @@ export default function Home() {
     if (!user || loading) return;
     try {
       localStorage.setItem(`user_folders_${user.uid}`, JSON.stringify(folders));
-    } catch (e) {}
+    } catch (e) { }
   }, [folders, user, loading]);
 
   const loadNotes = useCallback(async () => {
@@ -288,7 +288,7 @@ export default function Home() {
       if (cached) {
         setNotes(JSON.parse(cached));
       }
-    } catch (e) {}
+    } catch (e) { }
 
     try {
       const raw = selectedFolder
@@ -310,7 +310,7 @@ export default function Home() {
       setNotes(processed);
       try {
         localStorage.setItem(cacheName, JSON.stringify(processed));
-      } catch (e) {}
+      } catch (e) { }
     } catch { /* ignore */ }
   }, [user, selectedFolder, getNotesCacheKey, writeNotesCache]);
 
