@@ -213,6 +213,68 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
 
     const [scrollTop, setScrollTop] = useState(0);
 
+    const [selectedText, setSelectedText] = useState("");
+    const [floatingCopyPos, setFloatingCopyPos] = useState(null);
+    const [selectionCopied, setSelectionCopied] = useState(false);
+
+    const handleTextareaSelection = useCallback((e) => {
+        const ta = taRef.current;
+        if (!ta) return;
+        setTimeout(() => {
+            const start = ta.selectionStart;
+            const end = ta.selectionEnd;
+            if (start !== undefined && end !== undefined && start !== end) {
+                const text = ta.value.substring(start, end).trim();
+                if (text.length > 0) {
+                    setSelectedText(text);
+                    setSelectionCopied(false);
+                    const rect = ta.getBoundingClientRect();
+                    let x = rect.width / 2;
+                    let y = rect.height / 2;
+                    if (e.clientX !== undefined && e.clientY !== undefined) {
+                        x = e.clientX - rect.left;
+                        y = e.clientY - rect.top - 40;
+                        if (y < 10) y = e.clientY - rect.top + 20;
+                    } else {
+                        y = Math.max(30, ta.clientHeight / 3);
+                    }
+                    x = Math.max(40, Math.min(x, rect.width - 40));
+                    y = Math.max(10, Math.min(y, rect.height - 40));
+                    setFloatingCopyPos({ x, y });
+                } else {
+                    setSelectedText("");
+                    setFloatingCopyPos(null);
+                }
+            } else {
+                setSelectedText("");
+                setFloatingCopyPos(null);
+            }
+        }, 10);
+    }, []);
+
+    const handlePointerDown = useCallback(() => {
+        setSelectedText("");
+        setFloatingCopyPos(null);
+        setSelectionCopied(false);
+    }, []);
+
+    const handleFloatingCopy = useCallback((e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        if (!selectedText) return;
+        copyToClipboard(selectedText).then(() => {
+            setSelectionCopied(true);
+            notify("Selection copied!");
+            setTimeout(() => {
+                setFloatingCopyPos(null);
+                setSelectedText("");
+                setSelectionCopied(false);
+            }, 1000);
+        }).catch((err) => {
+            notify("Copy failed: " + err.message, "error");
+        });
+    }, [selectedText]);
+
     useEffect(() => {
         const goOnline = () => setIsOnline(true);
         const goOffline = () => setIsOnline(false);
@@ -857,10 +919,17 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                         ref={taRef}
                         value={content}
                         onChange={(e) => { setContent(e.target.value); syncScroll(); }}
-                        onScroll={syncScroll}
+                        onScroll={(e) => {
+                            syncScroll();
+                            setFloatingCopyPos(null);
+                            setSelectedText("");
+                        }}
                         onKeyDown={(e) => {
                             if ((e.metaKey || e.ctrlKey) && e.key === "f") { e.preventDefault(); srRef.current?.focus(); }
                         }}
+                        onPointerUp={handleTextareaSelection}
+                        onKeyUp={handleTextareaSelection}
+                        onPointerDown={handlePointerDown}
                         readOnly={note?.inBin}
                         style={{
                             ...sharedTextStyle,
@@ -931,6 +1000,46 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                             })}
                         </div>
                     </div>
+
+                    {/* Floating Selection Copy Button */}
+                    {floatingCopyPos && selectedText && (
+                        <button
+                            onClick={handleFloatingCopy}
+                            onMouseDown={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                            }}
+                            onPointerDown={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                            }}
+                            style={{
+                                position: "absolute",
+                                left: `${floatingCopyPos.x}px`,
+                                top: `${floatingCopyPos.y}px`,
+                                transform: "translateX(-50%)",
+                                zIndex: 50,
+                                pointerEvents: "auto",
+                            }}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg shadow-black/30 border transition-all duration-150 active:scale-95 animate-tooltip-center select-none ${
+                                selectionCopied
+                                    ? "bg-green-600 border-green-500 text-white"
+                                    : "bg-popover/95 backdrop-blur-md border-border/80 text-foreground hover:bg-accent hover:text-accent-foreground"
+                            }`}
+                        >
+                            {selectionCopied ? (
+                                <>
+                                    <FiCheck size={13} className="text-white" />
+                                    <span>Copied</span>
+                                </>
+                            ) : (
+                                <>
+                                    <FiCopy size={13} />
+                                    <span>Copy</span>
+                                </>
+                            )}
+                        </button>
+                    )}
                 </div>
 
                 {/* Inline full-size image previews */}
