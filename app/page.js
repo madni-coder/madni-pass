@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { auth } from "@/lib/firebase";
 import { getFolders, getAllNotes, getNotes, deleteNote, deleteNotePermanently, restoreNote, clearBin, getUserPinHash } from "@/lib/db";
 import { decrypt } from "@/lib/crypto";
 import Sidebar from "@/components/Sidebar";
@@ -81,6 +82,23 @@ export default function Home() {
   const notesCacheRef = useRef(new Map());
 
   const [folders, setFolders] = useState([]);
+  const [lastError, setLastError] = useState(null);
+
+  useEffect(() => {
+    const handleErr = (e) => {
+      setLastError(e.message || String(e));
+    };
+    const handleRejection = (e) => {
+      setLastError("Promise Rejection: " + (e.reason?.message || String(e.reason)));
+    };
+    window.addEventListener("error", handleErr);
+    window.addEventListener("unhandledrejection", handleRejection);
+    return () => {
+      window.removeEventListener("error", handleErr);
+      window.removeEventListener("unhandledrejection", handleRejection);
+    };
+  }, []);
+
   const [notes, setNotes] = useState([]);
   const [selectedFolder, setSelectedFolder] = useState(null);
   const [viewingBin, setViewingBin] = useState(false);
@@ -102,20 +120,23 @@ export default function Home() {
     }
   };
 
+  const handleSelectFolder = (folder) => {
+    setSelectedFolder(folder);
+    setUnlockedFolders([]);
+  };
+
   const handleUnlockFolder = (folderId) => {
     setUnlockedFolders((prev) => [...prev, folderId]);
   };
-
-  useEffect(() => {
-    setUnlockedFolders([]);
-  }, [selectedFolder?.id]);
 
   useEffect(() => {
     if (!user) return;
     try {
       const cachedPin = localStorage.getItem(`user_pin_hash_${user.uid}`);
       if (cachedPin) {
-        setGlobalPinHash(cachedPin);
+        Promise.resolve().then(() => {
+          setGlobalPinHash(cachedPin);
+        });
       }
     } catch (e) {}
     getUserPinHash(user.uid).then((hash) => {
@@ -202,7 +223,7 @@ export default function Home() {
       } else if (searchQuery) {
         setSearchQuery("");
       } else if (selectedFolder || viewingBin) {
-        setSelectedFolder(null);
+        handleSelectFolder(null);
         setViewingBin(false);
       } else {
         const isTauri = typeof window !== "undefined" && !!window.__TAURI_INTERNALS__;
@@ -227,13 +248,16 @@ export default function Home() {
     try {
       const cached = localStorage.getItem(`user_folders_${user.uid}`);
       if (cached) {
-        setFolders(JSON.parse(cached));
-        setLoading(false);
+        const parsed = JSON.parse(cached);
+        Promise.resolve().then(() => {
+          setFolders(parsed);
+          setLoading(false);
+        });
       } else {
-        setLoading(true);
+        Promise.resolve().then(() => setLoading(true));
       }
     } catch (e) {
-      setLoading(true);
+      Promise.resolve().then(() => setLoading(true));
     }
 
     getFolders(user.uid).then((fresh) => {
@@ -441,8 +465,13 @@ export default function Home() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-2 p-4">
         <FiLoader size={32} className="animate-spin text-primary" />
+        {lastError && (
+          <div className="text-xs text-destructive bg-destructive/10 p-3 rounded-xl mt-4 border border-destructive/20 max-w-sm text-center break-all font-mono">
+            Error: {lastError}
+          </div>
+        )}
       </div>
     );
   }
@@ -456,10 +485,10 @@ export default function Home() {
           userId={user.uid}
           userEmail={user?.email}
           onLogout={async () => { await logOut(); router.replace("/auth"); }}
-          onSelectFolder={(folder) => { setSelectedFolder(folder); setViewingBin(false); setSearchQuery(""); }}
+          onSelectFolder={(folder) => { handleSelectFolder(folder); setViewingBin(false); setSearchQuery(""); }}
           mobileOpen={mobileOpen} setMobileOpen={setMobileOpen}
           viewingBin={viewingBin}
-          onSelectBin={() => { setViewingBin(true); setSelectedFolder(null); setSearchQuery(""); }}
+          onSelectBin={() => { setViewingBin(true); handleSelectFolder(null); setSearchQuery(""); }}
           unlockedFolders={unlockedFolders}
           onUnlockFolder={handleUnlockFolder}
           globalPinHash={globalPinHash}
@@ -564,7 +593,7 @@ export default function Home() {
                 userId={user.uid}
                 userEmail={user.email}
                 onSuccess={() => handleUnlockFolder(selectedFolder.id)}
-                onCancel={() => setSelectedFolder(null)}
+                onCancel={() => handleSelectFolder(null)}
               />
             ) : (
               <>

@@ -37,6 +37,13 @@
             {
               "client_id": "504994185739-bg3bbncjtel7rr79atm6bjnm9o3vpbso.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "504994185739-7cf3da83hg0rdd7khfov6e0cmhl4k9pv.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.lazynote.webiste"
+              }
             }
           ]
         }
@@ -82,6 +89,13 @@
             {
               "client_id": "504994185739-bg3bbncjtel7rr79atm6bjnm9o3vpbso.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "504994185739-7cf3da83hg0rdd7khfov6e0cmhl4k9pv.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.lazynote.webiste"
+              }
             }
           ]
         }

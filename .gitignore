@@ -47,3 +47,11 @@ next-env.d.ts
 *.keystore
 *.jks
 key.properties
+
+# Tauri
+src-tauri/target/
+src-tauri/gen/apple/Pods/
+src-tauri/gen/apple/app.xcworkspace/
+src-tauri/gen/apple/build/
+src-tauri/gen/apple/Pods-app_iOS/
+src-tauri/gen/apple/Podfile.lock

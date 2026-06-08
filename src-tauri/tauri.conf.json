@@ -1,11 +1,11 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Lazy Notes",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "identifier": "com.lazynote.webiste",
   "build": {
     "frontendDist": "../out",
-    "devUrl": null,
+    "devUrl": "http://localhost:3000",
     "beforeDevCommand": null,
     "beforeBuildCommand": "npm run build"
   },

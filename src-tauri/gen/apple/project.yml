@@ -30,12 +30,13 @@ targets:
     sources:
       - path: Sources
       - path: Assets.xcassets
-      - path: Externals
       - path: app_iOS
       - path: assets
         buildPhase: resources
         type: folder
       - path: LaunchScreen.storyboard
+      - path: app_iOS/GoogleService-Info.plist
+        buildPhase: resources
     info:
       path: app_iOS/Info.plist
       properties:
@@ -64,11 +65,18 @@ targets:
         ENABLE_BITCODE: false
         ARCHS: [arm64, x86_64]
         VALID_ARCHS: arm64  x86_64 
-        LIBRARY_SEARCH_PATHS[arch=x86_64]: $(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)
-        LIBRARY_SEARCH_PATHS[arch=arm64]: $(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)
-        ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES: true
+        LIBRARY_SEARCH_PATHS: $(inherited) $(PROJECT_DIR)/Externals/$(CURRENT_ARCH)/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)
+        ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES: $(inherited)
         EXCLUDED_ARCHS[sdk=iphoneos*]: x86_64
+        CODE_SIGN_IDENTITY: ""
+        CODE_SIGNING_REQUIRED: false
+        CODE_SIGNING_ALLOWED: false
+        DEVELOPMENT_TEAM: ""
+        SDKROOT: iphonesimulator
       groups: [app]
+    configFiles:
+      debug: Pods/Target Support Files/Pods-app_iOS/Pods-app_iOS.debug.xcconfig
+      release: Pods/Target Support Files/Pods-app_iOS/Pods-app_iOS.release.xcconfig
     dependencies:
       - framework: libapp.a
         embed: false
@@ -84,6 +92,16 @@ targets:
           export PATH="/usr/local/bin:/Users/madniapple/.cargo/bin:$PATH"
           ARCHS="${ARCHS:-arm64}"
           npm run -- tauri ios xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths "${FRAMEWORK_SEARCH_PATHS:?}" --header-search-paths "${HEADER_SEARCH_PATHS:?}" --gcc-preprocessor-definitions "${GCC_PREPROCESSOR_DEFINITIONS:-}" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS}
+          echo "Performing library surgery to remove duplicate FFI symbols..."
+          cd "${SRCROOT}/Externals/${ARCHS}/${CONFIGURATION}"
+          mkdir -p temp_extract
+          cd temp_extract
+          ar -x ../libapp.a
+          rm -f ../libapp.a
+          ar -rcs ../libapp.a *.o
+          cd ..
+          rm -rf temp_extract
+          echo "Library surgery completed!"
         name: Build Rust Code
         basedOnDependencyAnalysis: false
         outputFiles:

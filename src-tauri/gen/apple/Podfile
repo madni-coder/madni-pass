@@ -1,13 +1,10 @@
 # Uncomment the next line to define a global platform for your project
+use_modular_headers!
 
 target 'app_iOS' do
 platform :ios, '14.0'
-  # Pods for app_iOS
-end
-
-target 'app_macOS' do
-platform :osx, '11.0'
-  # Pods for app_macOS
+  # Only FirebaseCore needed — app uses Firebase JS SDK inside WebView
+  pod 'FirebaseCore'
 end
 
 # Delete the deployment target for iOS and macOS, causing it to be inherited from the Podfile

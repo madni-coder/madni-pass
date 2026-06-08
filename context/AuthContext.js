@@ -19,25 +19,6 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const isMobileTauri = typeof window !== "undefined" &&
-            !!window.__TAURI_INTERNALS__ &&
-            /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-        // getRedirectResult hangs indefinitely in native WebViews (iOS/Android Tauri)
-        // because redirect-based auth is not used there — skip it on mobile Tauri.
-        if (!isMobileTauri) {
-            getRedirectResult(auth)
-                .then((result) => {
-                    if (result) {
-                        const email = result?.user?.email;
-                        if (email) localStorage.setItem("lastGoogleEmail", email);
-                    }
-                })
-                .catch((error) => {
-                    console.error("Redirect auth error:", error);
-                });
-        }
-
         const unsubscribe = onAuthStateChanged(auth, (u) => {
             setUser(u);
             setLoading(false);
