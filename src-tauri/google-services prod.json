@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "504994185739-2h7uh9m198b96414b153foln2fc1q3aa.apps.googleusercontent.com",
+          "client_id": "504994185739-k0qkavklo5i9r83lnsns6fj7ipek52od.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.lazynote.webiste",
-            "certificate_hash": "f09ab0e4880c965e6a5585affe0d6446df788d23"
+            "certificate_hash": "9ad7c0369e4666e7f5b8db212303d94482a39f91"
           }
         },
         {
@@ -57,14 +57,6 @@
         }
       },
       "oauth_client": [
-        {
-          "client_id": "504994185739-23qbgddqfktt9qdgges38gntqpptpake.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.madnipass.app",
-            "certificate_hash": "e266b37fb65719097c2fc998e7ba27cb0f5baba6"
-          }
-        },
         {
           "client_id": "504994185739-hvfephg7t8nso6n2tmm1me9bna19b3ub.apps.googleusercontent.com",
           "client_type": 1,
