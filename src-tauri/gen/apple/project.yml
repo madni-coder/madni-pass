@@ -77,11 +77,9 @@ targets:
         LIBRARY_SEARCH_PATHS: $(inherited) $(PROJECT_DIR)/Externals/$(CURRENT_ARCH)/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)
         ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES: $(inherited)
         EXCLUDED_ARCHS[sdk=iphoneos*]: x86_64
-        CODE_SIGN_IDENTITY: ""
-        CODE_SIGNING_REQUIRED: false
-        CODE_SIGNING_ALLOWED: false
-        DEVELOPMENT_TEAM: ""
-        SDKROOT: iphonesimulator
+        "EXCLUDED_ARCHS[sdk=iphonesimulator*]": arm64
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: "W5Q3VW5AX8"
       groups: [app]
     dependencies:
       - framework: libapp.a
@@ -99,12 +97,29 @@ targets:
       - script: |
           export PATH="/usr/local/bin:/Users/madniapple/.cargo/bin:$PATH"
           ARCHS="${ARCHS:-arm64}"
-          npm run -- tauri ios xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths "${FRAMEWORK_SEARCH_PATHS:?}" --header-search-paths "${HEADER_SEARCH_PATHS:?}" --gcc-preprocessor-definitions "${GCC_PREPROCESSOR_DEFINITIONS:-}" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS}
+          if ! npm run -- tauri ios xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths "${FRAMEWORK_SEARCH_PATHS:?}" --header-search-paths "${HEADER_SEARCH_PATHS:?}" --gcc-preprocessor-definitions "${GCC_preprocessor_definitions:-}" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS}; then
+            echo "tauri ios xcode-script failed. Checking if pre-compiled libapp.a exists..."
+            for arch in ${ARCHS}; do
+              LIB_PATH="${SRCROOT}/Externals/${arch}/${CONFIGURATION}/libapp.a"
+              if [ -s "$LIB_PATH" ] && [ "$(wc -c < "$LIB_PATH")" -gt 100 ]; then
+                echo "Found existing valid libapp.a at $LIB_PATH. Proceeding with existing library."
+              else
+                echo "Error: No valid libapp.a found at $LIB_PATH and xcode-script failed."
+                exit 1
+              fi
+            done
+          fi
           echo "Performing library surgery to remove duplicate FFI symbols..."
           for arch in ${ARCHS}; do
             echo "Processing architecture: ${arch}"
             if [ -d "${SRCROOT}/Externals/${arch}/${CONFIGURATION}" ]; then
               cd "${SRCROOT}/Externals/${arch}/${CONFIGURATION}" || continue
+              if [ -f libapp.a ]; then
+                echo "Before surgery size of libapp.a is:"
+                ls -lh libapp.a
+              else
+                echo "Warning: libapp.a does not exist in $(pwd)!"
+              fi
               mkdir -p temp_extract
               cd temp_extract || continue
               ar -x ../libapp.a
