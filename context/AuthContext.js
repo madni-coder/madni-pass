@@ -1,16 +1,12 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
 import {
-    signInWithPopup,
-    signInWithRedirect,
-    getRedirectResult,
     GoogleAuthProvider,
     signInAnonymously,
     signOut,
     onAuthStateChanged,
-    signInWithCredential,
 } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, getBrowserPopupRedirectResolver } from "@/lib/firebase";
 
 const AuthContext = createContext(null);
 
@@ -19,11 +15,18 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (u) => {
-            setUser(u);
-            setLoading(false);
-        });
-        return unsubscribe;
+        console.log("[AuthContext] Registering onAuthStateChanged. Auth instance:", auth);
+        try {
+            const unsubscribe = onAuthStateChanged(auth, (u) => {
+                console.log("[AuthContext] onAuthStateChanged fired. User:", u ? u.uid : "null");
+                setUser(u);
+                setLoading(false);
+            });
+            return unsubscribe;
+        } catch (err) {
+            console.error("[AuthContext] onAuthStateChanged registration failed:", err);
+            setLoading(false); // don't block the app if registration failed
+        }
     }, []);
 
     const signInWithGoogle = async (opts = {}) => {
@@ -31,15 +34,28 @@ export function AuthProvider({ children }) {
         const provider = new GoogleAuthProvider();
 
         try {
+            // Detect Tauri iOS/Android context — use native plugin instead of popup.
+            // Check: __TAURI_INTERNALS__ present AND (mobile UA OR tauri:// protocol)
             const isMobileTauri = typeof window !== "undefined" &&
                 !!window.__TAURI_INTERNALS__ &&
-                /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                (/Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+                 window.location.protocol === "tauri:");
 
             if (isMobileTauri) {
                 const { signIn } = await import('@choochmeque/tauri-plugin-google-auth-api');
-                const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+                let clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+                
+                const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+                const isAndroid = /Android/i.test(navigator.userAgent);
+                
+                if (isIOS && process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID_IOS) {
+                    clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID_IOS;
+                } else if (isAndroid && process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID_ANDROID) {
+                    clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID_ANDROID;
+                }
+
                 if (!clientId || clientId.includes("YOUR_WEB_CLIENT_ID_HERE")) {
-                    throw new Error("Google Web Client ID is not configured in .env.local (NEXT_PUBLIC_GOOGLE_CLIENT_ID).");
+                    throw new Error("Google Client ID is not configured in .env.local.");
                 }
 
                 const response = await signIn({
@@ -52,6 +68,8 @@ export function AuthProvider({ children }) {
                 }
 
                 const credential = GoogleAuthProvider.credential(response.idToken);
+                // Dynamic import to avoid pulling GAPI into the iOS bundle
+                const { signInWithCredential } = await import("firebase/auth");
                 const result = await signInWithCredential(auth, credential);
                 const email = result?.user?.email;
                 if (email) localStorage.setItem("lastGoogleEmail", email);
@@ -68,7 +86,13 @@ export function AuthProvider({ children }) {
                 provider.setCustomParameters({ login_hint: lastEmail });
             }
 
-            const result = await signInWithPopup(auth, provider);
+            // Dynamic import signInWithPopup + resolver only on desktop web path.
+            // This prevents gapi.iframes from ever loading on Tauri iOS.
+            const [{ signInWithPopup }, resolver] = await Promise.all([
+                import(/* webpackPrefetch: false, webpackPreload: false */ "firebase/auth"),
+                getBrowserPopupRedirectResolver(),
+            ]);
+            const result = await signInWithPopup(auth, provider, resolver);
             const email = result?.user?.email;
             if (email) localStorage.setItem("lastGoogleEmail", email);
             return result;

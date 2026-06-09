@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1292DFBC353451F01E5A0900 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 55E0E2A15C9FA1218C4078C8 /* FirebaseCore */; };
 		299814393FFBF154FAD94CA8 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F3673D372C5ABDD1AD6E7067 /* QuartzCore.framework */; };
 		3036F7131E55779ABF15BD58 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 02B7F8347F94B067E6B27396 /* LaunchScreen.storyboard */; };
 		31585529C029A01BE249A285 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E81BD6B453D87B7F7B1597B /* CoreGraphics.framework */; };
@@ -15,7 +16,6 @@
 		53CDD0ACFBE8BDF1550B2E53 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 682535EEFE1DA20BE07B123C /* main.mm */; };
 		5C516481BCA83A182C2BCC94 /* assets in Resources */ = {isa = PBXBuildFile; fileRef = 3842AE2A64FB9933D0400EA4 /* assets */; };
 		618672DC8A5E0605441C9935 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0E2B15F176E4B041AE33EEEA /* UIKit.framework */; };
-		76F7E8F4C432107760C769A6 /* libPods-app_iOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0969C5F642457E85BDD80823 /* libPods-app_iOS.a */; };
 		836D84C5F07860664DAF79C8 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D8F57162F5CC7AEDD55F173D /* WebKit.framework */; };
 		9D59FB167BB4E699DA17D1E9 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 04B56F58E2E44DDE1D67E7B7 /* MetalKit.framework */; };
 		C6BD59C055C986EA4A77FDA2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AF1DE57E7D9CF13BB2E0E038 /* Assets.xcassets */; };
@@ -27,7 +27,6 @@
 		007E478DB8BC37A788C4730F /* app_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = app_iOS.entitlements; sourceTree = "<group>"; };
 		02B7F8347F94B067E6B27396 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		04B56F58E2E44DDE1D67E7B7 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
-		0969C5F642457E85BDD80823 /* libPods-app_iOS.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-app_iOS.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		0E2B15F176E4B041AE33EEEA /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		1631E4CFBB715FFDBF919C8C /* main.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = main.rs; sourceTree = "<group>"; };
 		17B52554D60D361AFE791C3E /* lib.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = lib.rs; sourceTree = "<group>"; };
@@ -42,11 +41,7 @@
 		AF1DE57E7D9CF13BB2E0E038 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		CE1209BFDECB28E00189B168 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		D8F57162F5CC7AEDD55F173D /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
-		DB2FFD59A02E50F48B198C91 /* Pods-app_iOS.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-app_iOS.debug.xcconfig"; path = "Target Support Files/Pods-app_iOS/Pods-app_iOS.debug.xcconfig"; sourceTree = "<group>"; };
-		E149591ACC608AFFDD1D1CD9 /* Pods-app_iOS.debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Pods-app_iOS.debug.xcconfig"; sourceTree = "<group>"; };
-		F2CF9C95F8D271B3F8D7B90C /* Pods-app_iOS.release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Pods-app_iOS.release.xcconfig"; sourceTree = "<group>"; };
 		F3673D372C5ABDD1AD6E7067 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
-		F6DC8B0A7F4B583205E0780A /* Pods-app_iOS.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-app_iOS.release.xcconfig"; path = "Target Support Files/Pods-app_iOS/Pods-app_iOS.release.xcconfig"; sourceTree = "<group>"; };
 		FBC720DFA1D01F55B0A32344 /* Lazy Notes.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Lazy Notes.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -63,7 +58,7 @@
 				324A1E9A4258E7911D4DAC39 /* Security.framework in Frameworks */,
 				618672DC8A5E0605441C9935 /* UIKit.framework in Frameworks */,
 				836D84C5F07860664DAF79C8 /* WebKit.framework in Frameworks */,
-				76F7E8F4C432107760C769A6 /* libPods-app_iOS.a in Frameworks */,
+				1292DFBC353451F01E5A0900 /* FirebaseCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -81,7 +76,6 @@
 				9FACFFCB6E3743955F72464C /* Security.framework */,
 				0E2B15F176E4B041AE33EEEA /* UIKit.framework */,
 				D8F57162F5CC7AEDD55F173D /* WebKit.framework */,
-				0969C5F642457E85BDD80823 /* libPods-app_iOS.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -112,16 +106,6 @@
 			path = Sources;
 			sourceTree = "<group>";
 		};
-		79B5D17DB0C4F7DFDAC4FA27 /* Pods-app_iOS */ = {
-			isa = PBXGroup;
-			children = (
-				E149591ACC608AFFDD1D1CD9 /* Pods-app_iOS.debug.xcconfig */,
-				F2CF9C95F8D271B3F8D7B90C /* Pods-app_iOS.release.xcconfig */,
-			);
-			name = "Pods-app_iOS";
-			path = "Pods/Target Support Files/Pods-app_iOS";
-			sourceTree = "<group>";
-		};
 		855775165ACE55D883F89EB3 /* src */ = {
 			isa = PBXGroup;
 			children = (
@@ -139,22 +123,11 @@
 				AF1DE57E7D9CF13BB2E0E038 /* Assets.xcassets */,
 				02B7F8347F94B067E6B27396 /* LaunchScreen.storyboard */,
 				2867E55E70187711EE923EBD /* app_iOS */,
-				79B5D17DB0C4F7DFDAC4FA27 /* Pods-app_iOS */,
 				78CBE3E5873199C0066F12DF /* Sources */,
 				855775165ACE55D883F89EB3 /* src */,
 				1BBF8C620E54F8C028CA130C /* Frameworks */,
 				EE72B6AC647386A11F795E44 /* Products */,
-				8F107F2ECAD1EA8C37EFC957 /* Pods */,
 			);
-			sourceTree = "<group>";
-		};
-		8F107F2ECAD1EA8C37EFC957 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				DB2FFD59A02E50F48B198C91 /* Pods-app_iOS.debug.xcconfig */,
-				F6DC8B0A7F4B583205E0780A /* Pods-app_iOS.release.xcconfig */,
-			);
-			path = Pods;
 			sourceTree = "<group>";
 		};
 		EE72B6AC647386A11F795E44 /* Products */ = {
@@ -181,18 +154,19 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = CDCB6DFA1AEBFEE3F608BA27 /* Build configuration list for PBXNativeTarget "app_iOS" */;
 			buildPhases = (
-				DDC488E0B192E14FE07105B9 /* [CP] Check Pods Manifest.lock */,
 				E028F843270D8815FCE2B491 /* Build Rust Code */,
 				81BE6BC5B603407AF570E994 /* Sources */,
 				2FBCB8C3ED193E9C4A9FDB59 /* Resources */,
 				4825CF6C55516D374210C8E1 /* Frameworks */,
-				48A72A6AB481C175F8844F72 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			name = app_iOS;
+			packageProductDependencies = (
+				55E0E2A15C9FA1218C4078C8 /* FirebaseCore */,
+			);
 			productName = app_iOS;
 			productReference = FBC720DFA1D01F55B0A32344 /* Lazy Notes.app */;
 			productType = "com.apple.product-type.application";
@@ -216,7 +190,9 @@
 			);
 			mainGroup = 87648061424F20D5D4871E9E;
 			minimizedProjectReferenceProxies = 1;
-			productRefGroup = EE72B6AC647386A11F795E44 /* Products */;
+			packageReferences = (
+				079E3F7AFB0CDF63CF1EC3B7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -240,49 +216,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		48A72A6AB481C175F8844F72 /* [CP] Copy Pods Resources */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-app_iOS/Pods-app_iOS-resources-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			inputPaths = (
-			);
-			name = "[CP] Copy Pods Resources";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-app_iOS/Pods-app_iOS-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-app_iOS/Pods-app_iOS-resources.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		DDC488E0B192E14FE07105B9 /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-app_iOS-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
 		E028F843270D8815FCE2B491 /* Build Rust Code */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
@@ -302,7 +235,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "export PATH=\"/usr/local/bin:/Users/madniapple/.cargo/bin:$PATH\"\nARCHS=\"${ARCHS:-arm64}\"\nnpm run -- tauri ios xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths \"${FRAMEWORK_SEARCH_PATHS:?}\" --header-search-paths \"${HEADER_SEARCH_PATHS:?}\" --gcc-preprocessor-definitions \"${GCC_PREPROCESSOR_DEFINITIONS:-}\" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS}\necho \"Performing library surgery to remove duplicate FFI symbols...\"\ncd \"${SRCROOT}/Externals/${ARCHS}/${CONFIGURATION}\"\nmkdir -p temp_extract\ncd temp_extract\nar -x ../libapp.a\nrm -f ../libapp.a\nar -rcs ../libapp.a *.o\ncd ..\nrm -rf temp_extract\necho \"Library surgery completed!\"\n";
+			shellScript = "export PATH=\"/usr/local/bin:/Users/madniapple/.cargo/bin:$PATH\"\nARCHS=\"${ARCHS:-arm64}\"\nnpm run -- tauri ios xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths \"${FRAMEWORK_SEARCH_PATHS:?}\" --header-search-paths \"${HEADER_SEARCH_PATHS:?}\" --gcc-preprocessor-definitions \"${GCC_PREPROCESSOR_DEFINITIONS:-}\" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS}\necho \"Performing library surgery to remove duplicate FFI symbols...\"\nfor arch in ${ARCHS}; do\n  echo \"Processing architecture: ${arch}\"\n  if [ -d \"${SRCROOT}/Externals/${arch}/${CONFIGURATION}\" ]; then\n    cd \"${SRCROOT}/Externals/${arch}/${CONFIGURATION}\" || continue\n    mkdir -p temp_extract\n    cd temp_extract || continue\n    ar -x ../libapp.a\n    rm -f ../libapp.a\n    ar -rcs ../libapp.a *.o\n    cd ..\n    rm -rf temp_extract\n  else\n    echo \"Directory for ${arch} does not exist, skipping library surgery.\"\n  fi\ndone\necho \"Library surgery completed!\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -320,7 +253,6 @@
 /* Begin XCBuildConfiguration section */
 		1B9D5B8D34E6E0C88D0207F2 /* release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = F6DC8B0A7F4B583205E0780A /* Pods-app_iOS.release.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = "$(inherited)";
 				ARCHS = (
@@ -417,7 +349,6 @@
 		};
 		4AC19FD47C6011940ACEB467 /* debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = DB2FFD59A02E50F48B198C91 /* Pods-app_iOS.debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = "$(inherited)";
 				ARCHS = (
@@ -542,6 +473,25 @@
 			defaultConfigurationName = debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		079E3F7AFB0CDF63CF1EC3B7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.15.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		55E0E2A15C9FA1218C4078C8 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 079E3F7AFB0CDF63CF1EC3B7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A9B1B09F1872768368ACECE2 /* Project object */;
 }

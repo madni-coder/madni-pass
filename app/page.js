@@ -86,10 +86,15 @@ export default function Home() {
 
   useEffect(() => {
     const handleErr = (e) => {
+      // "Script error." is an opaque cross-origin error (e.g. from Tauri-injected or
+      // third-party scripts) that contains no actionable info — skip it.
+      if (!e.message || e.message === "Script error.") return;
       setLastError(e.message || String(e));
     };
     const handleRejection = (e) => {
-      setLastError("Promise Rejection: " + (e.reason?.message || String(e.reason)));
+      const msg = e.reason?.message || String(e.reason);
+      if (!msg || msg === "Script error.") return;
+      setLastError("Promise Rejection: " + msg);
     };
     window.addEventListener("error", handleErr);
     window.addEventListener("unhandledrejection", handleRejection);
@@ -106,6 +111,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [unlockedFolders, setUnlockedFolders] = useState([]);
   const [globalPinHash, setGlobalPinHash] = useState(null);
+
+  console.log("[Home] Render. authLoading:", authLoading, "user:", user ? user.uid : "null", "loading (folders):", loading);
   const [showGuestAlert, setShowGuestAlert] = useState(() => {
     if (typeof window !== "undefined") {
       return sessionStorage.getItem("dismissedGuestAlert") !== "true";

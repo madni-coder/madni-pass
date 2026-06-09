@@ -64,11 +64,16 @@ fn exit_app() {
   std::process::exit(0);
 }
 
+#[tauri::command]
+fn log_message(message: String) {
+  println!("[WebView Log] {}", message);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
     .plugin(tauri_plugin_google_auth::init())
-    .invoke_handler(tauri::generate_handler![send_reset_email, exit_app])
+    .invoke_handler(tauri::generate_handler![send_reset_email, exit_app, log_message])
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(

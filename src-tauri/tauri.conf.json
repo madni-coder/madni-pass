@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Lazy Notes",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "identifier": "com.lazynote.webiste",
   "build": {
     "frontendDist": "../out",
@@ -22,7 +22,8 @@
     ],
     "security": {
       "csp": null
-    }
+    },
+    "macOSPrivateApi": false
   },
   "bundle": {
     "active": true,

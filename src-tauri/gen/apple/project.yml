@@ -7,6 +7,10 @@ fileGroups: [../../src]
 configs:
   debug: debug
   release: release
+packages:
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk.git
+    from: 11.15.0
 settingGroups:
   app:
     base:
@@ -54,6 +58,11 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         CFBundleShortVersionString: 0.2.0
         CFBundleVersion: "0.2.0"
+        CFBundleURLTypes:
+          - CFBundleTypeRole: Editor
+            CFBundleURLSchemes:
+              - com.googleusercontent.apps.504994185739-bg3bbncjtel7rr79atm6bjnm9o3vpbso
+              - com.googleusercontent.apps.504994185739-7cf3da83hg0rdd7khfov6e0cmhl4k9pv
     entitlements:
       path: app_iOS/app_iOS.entitlements
     scheme:
@@ -74,9 +83,6 @@ targets:
         DEVELOPMENT_TEAM: ""
         SDKROOT: iphonesimulator
       groups: [app]
-    configFiles:
-      debug: Pods/Target Support Files/Pods-app_iOS/Pods-app_iOS.debug.xcconfig
-      release: Pods/Target Support Files/Pods-app_iOS/Pods-app_iOS.release.xcconfig
     dependencies:
       - framework: libapp.a
         embed: false
@@ -87,20 +93,29 @@ targets:
       - sdk: Security.framework
       - sdk: UIKit.framework
       - sdk: WebKit.framework
+      - package: Firebase
+        product: FirebaseCore
     preBuildScripts:
       - script: |
           export PATH="/usr/local/bin:/Users/madniapple/.cargo/bin:$PATH"
           ARCHS="${ARCHS:-arm64}"
           npm run -- tauri ios xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths "${FRAMEWORK_SEARCH_PATHS:?}" --header-search-paths "${HEADER_SEARCH_PATHS:?}" --gcc-preprocessor-definitions "${GCC_PREPROCESSOR_DEFINITIONS:-}" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS}
           echo "Performing library surgery to remove duplicate FFI symbols..."
-          cd "${SRCROOT}/Externals/${ARCHS}/${CONFIGURATION}"
-          mkdir -p temp_extract
-          cd temp_extract
-          ar -x ../libapp.a
-          rm -f ../libapp.a
-          ar -rcs ../libapp.a *.o
-          cd ..
-          rm -rf temp_extract
+          for arch in ${ARCHS}; do
+            echo "Processing architecture: ${arch}"
+            if [ -d "${SRCROOT}/Externals/${arch}/${CONFIGURATION}" ]; then
+              cd "${SRCROOT}/Externals/${arch}/${CONFIGURATION}" || continue
+              mkdir -p temp_extract
+              cd temp_extract || continue
+              ar -x ../libapp.a
+              rm -f ../libapp.a
+              ar -rcs ../libapp.a *.o
+              cd ..
+              rm -rf temp_extract
+            else
+              echo "Directory for ${arch} does not exist, skipping library surgery."
+            fi
+          done
           echo "Library surgery completed!"
         name: Build Rust Code
         basedOnDependencyAnalysis: false
