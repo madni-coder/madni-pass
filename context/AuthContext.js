@@ -5,8 +5,10 @@ import {
     signInAnonymously,
     signOut,
     onAuthStateChanged,
+    deleteUser,
 } from "firebase/auth";
 import { auth, getBrowserPopupRedirectResolver } from "@/lib/firebase";
+import { deleteUserAccountData } from "@/lib/db";
 
 const AuthContext = createContext(null);
 
@@ -151,8 +153,29 @@ export function AuthProvider({ children }) {
         await signOut(auth);
     };
 
+    const deleteAccount = async () => {
+        const currentUser = auth.currentUser;
+        if (!currentUser) return;
+        const uid = currentUser.uid;
+
+        // 1. Delete data from Firestore / local storage
+        await deleteUserAccountData(uid);
+
+        // 2. Delete user from Firebase Auth (if not guest)
+        if (!currentUser.isAnonymous) {
+            await deleteUser(currentUser);
+        }
+
+        // Clean up lastGoogleEmail or other state
+        try { localStorage.removeItem("lastGoogleEmail"); } catch (e) { }
+        try { sessionStorage.setItem("autoRedirectTried", "1"); } catch (e) { }
+
+        // 3. Log out / Sign out
+        await signOut(auth);
+    };
+
     return (
-        <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithGoogleSelectAccount, forgetLastGoogleEmail, signInAsGuest, logOut }}>
+        <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithGoogleSelectAccount, forgetLastGoogleEmail, signInAsGuest, logOut, deleteAccount }}>
             {children}
         </AuthContext.Provider>
     );

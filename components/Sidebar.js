@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FiFolder, FiPlus, FiMoreHorizontal, FiEdit2, FiTrash2, FiLock, FiUnlock, FiMenu, FiX, FiSun, FiMoon, FiSearch } from "react-icons/fi";
+import { FiFolder, FiPlus, FiMoreHorizontal, FiEdit2, FiTrash2, FiLock, FiUnlock, FiMenu, FiX, FiSun, FiMoon, FiSearch, FiSettings } from "react-icons/fi";
 import { BiFolderOpen } from "react-icons/bi";
 import { FaPowerOff } from "react-icons/fa";
 import { createFolder, updateFolder, deleteFolder, updateFolderPin, setUserPinHash } from "@/lib/db";
@@ -24,10 +24,33 @@ import CryptoJS from "crypto-js";
 export default function Sidebar({ folders, setFolders, selectedFolder, onSelectFolder, userId, userEmail, onLogout, mobileOpen, setMobileOpen, viewingBin, onSelectBin, unlockedFolders = [], onUnlockFolder, globalPinHash, setGlobalPinHash }) {
     const { theme, setTheme } = useTheme();
     const logoSrc = (theme === "light") ? "/lightLogo.png" : "/lazyNoteIcon.png";
-    const { user } = useAuth();
+    const { user, deleteAccount } = useAuth();
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [deleteAccountConfirm, setDeleteAccountConfirm] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const rawFirst = user?.displayName ? user.displayName.split(" ")[0] : (user?.email ? user.email.split("@")[0] : "");
     const firstName = rawFirst ? (rawFirst.charAt(0).toUpperCase() + rawFirst.slice(1)) : "";
     const [newFolderName, setNewFolderName] = useState("");
+
+    const handleDeleteAccount = async () => {
+        setIsDeleting(true);
+        try {
+            await deleteAccount();
+            notify("Account permanently deleted.");
+            setDeleteAccountConfirm(false);
+            setSettingsOpen(false);
+            if (onLogout) onLogout();
+        } catch (err) {
+            console.error(err);
+            if (err.code === "auth/requires-recent-login") {
+                notify("Security: Please log out and back in again to delete your account.", "error");
+            } else {
+                notify("Failed to delete account: " + err.message, "error");
+            }
+        } finally {
+            setIsDeleting(false);
+        }
+    };
     const [showNewFolder, setShowNewFolder] = useState(false);
     const [renameTarget, setRenameTarget] = useState(null);
     const [renameName, setRenameName] = useState("");
@@ -303,13 +326,22 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
             </div>
 
             <div className="border-t border-border px-3 py-3 flex items-center justify-between shrink-0">
-                <button
-                    onClick={() => setTheme((theme ?? "dark") === "dark" ? "light" : "dark")}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                    title={(theme ?? "dark") === "dark" ? "Light mode" : "Dark mode"}
-                >
-                    {(theme ?? "dark") === "dark" ? <FiSun size={16} /> : <FiMoon size={16} />}
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setTheme((theme ?? "dark") === "dark" ? "light" : "dark")}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        title={(theme ?? "dark") === "dark" ? "Light mode" : "Dark mode"}
+                    >
+                        {(theme ?? "dark") === "dark" ? <FiSun size={16} /> : <FiMoon size={16} />}
+                    </button>
+                    <button
+                        onClick={() => setSettingsOpen(true)}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        title="Settings"
+                    >
+                        <FiSettings size={16} />
+                    </button>
+                </div>
                 <button
                     onClick={() => setLogoutConfirm(true)}
                     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors text-xs font-medium"
@@ -432,6 +464,76 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                     }}
                 />
             )}
+
+            <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+                <DialogContent className="bg-card border-border text-foreground max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>Account Settings</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4 space-y-4">
+                        <div className="space-y-1">
+                            <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Profile Information</label>
+                            <div className="p-3 bg-muted/50 border border-border rounded-xl">
+                                <p className="text-sm font-semibold text-foreground">
+                                    {user?.isAnonymous ? "Guest Mode" : user?.displayName || "User"}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                    {user?.isAnonymous ? "Your data is only stored on this device" : user?.email || ""}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-border/60">
+                            <Button
+                                variant="destructive"
+                                onClick={() => setDeleteAccountConfirm(true)}
+                                className="w-full flex items-center justify-center gap-1.5 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-medium text-xs py-2 rounded-xl"
+                            >
+                                <FiTrash2 size={13} />
+                                <span>Delete Account</span>
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <AlertDialog open={deleteAccountConfirm} onOpenChange={setDeleteAccountConfirm}>
+                <AlertDialogContent className="bg-card border-border text-foreground">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-destructive flex items-center gap-2">
+                            ⚠️ Permanently Delete Account?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-muted-foreground text-sm leading-relaxed">
+                            {user?.isAnonymous ? (
+                                "Are you sure you want to delete your guest account? This will permanently erase all your folders, notes, and local data from this device. This action is irreversible!"
+                            ) : (
+                                "Are you sure you want to permanently delete your account? This will delete all your notes, folders, settings, and authentications from the database. This action is irreversible!"
+                            )}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isDeleting} className="bg-muted border-border text-muted-foreground hover:bg-muted/80">
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleDeleteAccount();
+                            }}
+                            disabled={isDeleting}
+                            className="bg-destructive hover:bg-destructive/90 flex items-center gap-1.5"
+                        >
+                            {isDeleting ? (
+                                <span className="animate-pulse">Deleting...</span>
+                            ) : (
+                                <>
+                                    <FiTrash2 size={12} /> Yes, Delete Permanently
+                                </>
+                            )}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }
