@@ -52,8 +52,8 @@ export function AuthProvider({ children }) {
                 
                 if (isIOS && process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID_IOS) {
                     clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID_IOS;
-                } else if (isAndroid && process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID_ANDROID) {
-                    clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID_ANDROID;
+                } else if (isAndroid && process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) {
+                    clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
                 }
 
                 if (!clientId || clientId.includes("YOUR_WEB_CLIENT_ID_HERE")) {
