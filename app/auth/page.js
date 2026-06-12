@@ -490,13 +490,13 @@ export default function AuthPage() {
         {mounted && (
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="fixed top-[calc(1.5rem+env(safe-area-inset-top,0px))] right-6 z-50 w-10 h-10 flex items-center justify-center rounded-xl bg-card border border-border/80 text-foreground hover:bg-muted/80 shadow-md active:scale-95 transition-all duration-150"
+            className="fixed top-[calc(1.5rem+env(safe-area-inset-top,0px))] right-6 z-50 w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 flex items-center justify-center rounded-xl bg-card border border-border/80 text-foreground hover:bg-muted/80 shadow-md active:scale-95 transition-all duration-150"
             aria-label="Toggle Theme"
           >
             {theme === "dark" ? (
-              <FiSun size={18} className="text-yellow-400" />
+              <FiSun className="w-[18px] h-[18px] md:w-5 md:h-5 lg:w-6 lg:h-6 text-yellow-400" />
             ) : (
-              <FiMoon size={18} className="text-slate-700" />
+              <FiMoon className="w-[18px] h-[18px] md:w-5 md:h-5 lg:w-6 lg:h-6 text-slate-700" />
             )}
           </button>
         )}
@@ -559,22 +559,22 @@ export default function AuthPage() {
       {mounted && (
         <button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="fixed top-[calc(1.5rem+env(safe-area-inset-top,0px))] right-6 z-50 w-10 h-10 flex items-center justify-center rounded-xl bg-card border border-border/80 text-foreground hover:bg-muted/80 shadow-md active:scale-95 transition-all duration-150"
+          className="fixed top-[calc(1.5rem+env(safe-area-inset-top,0px))] right-6 z-50 w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 flex items-center justify-center rounded-xl bg-card border border-border/80 text-foreground hover:bg-muted/80 shadow-md active:scale-95 transition-all duration-150"
           aria-label="Toggle Theme"
         >
           {theme === "dark" ? (
-            <FiSun size={18} className="text-yellow-400" />
+            <FiSun className="w-[18px] h-[18px] md:w-5 md:h-5 lg:w-6 lg:h-6 text-yellow-400" />
           ) : (
-            <FiMoon size={18} className="text-slate-700" />
+            <FiMoon className="w-[18px] h-[18px] md:w-5 md:h-5 lg:w-6 lg:h-6 text-slate-700" />
           )}
         </button>
       )}
 
       {/* ── Content ── */}
-      <div className="relative z-10 w-full max-w-5xl mx-auto px-5 flex flex-col md:flex-row items-center justify-center h-[100dvh] md:h-auto md:min-h-0 md:py-16 overflow-hidden md:overflow-visible">
+      <div className="relative z-10 w-full max-w-5xl lg:max-w-6xl xl:max-w-7xl mx-auto px-5 flex flex-col md:flex-row items-center justify-center h-[100dvh] md:h-auto md:min-h-0 md:py-16 overflow-hidden md:overflow-visible">
         {/* ══ Lamp section ══ */}
-        <div className="flex flex-col items-center gap-2 shrink-0 h-[min(210px,42dvh)] md:h-auto justify-end pb-1 md:pb-0">
-          <div className="flex-1 w-[165px] md:w-[280px] md:h-[360px] md:flex-none">
+        <div className="flex flex-col items-center gap-2 md:gap-3 lg:gap-4 shrink-0 h-[min(210px,42dvh)] md:h-auto justify-end pb-1 md:pb-0">
+          <div className="flex-1 w-[165px] md:w-[340px] md:h-[440px] lg:w-[420px] lg:h-[540px] md:flex-none">
             {mounted && (
               <LampSVG
                 isOn={lampOn}
@@ -585,7 +585,7 @@ export default function AuthPage() {
             )}
           </div>
           {!lampOn && (
-            <p className="text-xs font-medium select-none text-center text-muted-foreground opacity-70">
+            <p className="text-xs md:text-sm lg:text-base font-medium select-none text-center text-muted-foreground opacity-70">
               Tap the lamp or pull the cord
             </p>
           )}
@@ -593,18 +593,18 @@ export default function AuthPage() {
 
         {/* Desktop-only gap spacer that grows when form appears */}
         <div
-          className="hidden md:block shrink-0"
+          className="hidden md:block shrink-0 md:[--gap-width:4.5rem] lg:[--gap-width:6.5rem]"
           style={{
-            width: lampOn ? "3.5rem" : "0",
+            width: lampOn ? "var(--gap-width, 3.5rem)" : "0",
             transition: "width 0.7s cubic-bezier(0.16,1,0.3,1)",
           }}
         />
 
         {/* ══ Form section — collapses to 0 when lamp is off ══ */}
         <div
-          className="flex-1 min-h-0 md:flex-none shrink-0 overflow-hidden w-full md:w-auto"
+          className="flex-1 min-h-0 md:flex-none shrink-0 overflow-hidden w-full md:[--form-max-width:38rem] lg:[--form-max-width:44rem] xl:[--form-max-width:48rem]"
           style={{
-            maxWidth: lampOn ? "min(32rem, 100%)" : "0",
+            maxWidth: lampOn ? "var(--form-max-width, min(32rem, 100%))" : "0",
             maxHeight: lampOn ? "900px" : "0",
             opacity: lampOn ? 1 : 0,
             pointerEvents: lampOn ? "auto" : "none",
@@ -637,10 +637,10 @@ export default function AuthPage() {
                 }}
               />
 
-              <div className="p-6 sm:p-8 space-y-5">
+              <div className="p-6 sm:p-8 md:p-10 lg:p-12 space-y-5 md:space-y-6 lg:space-y-8">
                 {/* Header: logo + title */}
-                <div className="flex flex-col items-center gap-3 pb-1">
-                  <div className="w-16 h-16 rounded-full overflow-hidden border border-border/40 shadow-lg bg-card shrink-0">
+                <div className="flex flex-col items-center gap-3 md:gap-4 lg:gap-5 pb-1 md:pb-2 lg:pb-3">
+                  <div className="w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-full overflow-hidden border border-border/40 shadow-lg bg-card shrink-0">
                     <img
                       src="/lightLogo.png"
                       alt="Lazy Notes"
@@ -657,7 +657,7 @@ export default function AuthPage() {
                     />
                   </div>
                   <div className="text-center">
-                    <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
+                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground">
                       Lazy{" "}
                       <span
                         style={{
@@ -667,7 +667,7 @@ export default function AuthPage() {
                         Notes
                       </span>
                     </h1>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-xs md:text-sm lg:text-base text-muted-foreground mt-0.5 lg:mt-1">
                       Just Note Like A Lazy Person
                     </p>
                   </div>
@@ -675,7 +675,7 @@ export default function AuthPage() {
 
                 {/* Error */}
                 {error && (
-                  <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-sm text-destructive text-center font-medium">
+                  <div className="p-3 md:p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-sm md:text-base text-destructive text-center font-medium">
                     {error}
                   </div>
                 )}
@@ -685,7 +685,7 @@ export default function AuthPage() {
                   type="button"
                   onClick={() => setShowGuestForm((s) => !s)}
                   aria-expanded={showGuestForm}
-                  className="w-full flex items-center justify-center gap-2 h-11 px-4 rounded-xl text-sm font-semibold border transition-all active:scale-[0.98] hover:opacity-90"
+                  className="w-full flex items-center justify-center gap-2 md:gap-2.5 lg:gap-3 h-11 md:h-12 lg:h-14 px-4 md:px-5 lg:px-6 rounded-xl text-sm md:text-base lg:text-lg font-semibold border transition-all active:scale-[0.98] hover:opacity-90"
                   style={{
                     background: mounted ? `${primaryColor}14` : "transparent",
                     borderColor: mounted
@@ -694,7 +694,7 @@ export default function AuthPage() {
                     color: mounted ? primaryColor : "var(--primary)",
                   }}
                 >
-                  <span className="relative flex h-2 w-2">
+                  <span className="relative flex h-2 w-2 md:h-2.5 md:w-2.5 lg:h-3 lg:w-3">
                     <span
                       className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-70"
                       style={{
@@ -702,7 +702,7 @@ export default function AuthPage() {
                       }}
                     />
                     <span
-                      className="relative inline-flex rounded-full h-2 w-2"
+                      className="relative inline-flex rounded-full h-full w-full"
                       style={{
                         background: mounted ? primaryColor : "var(--primary)",
                       }}
@@ -713,29 +713,29 @@ export default function AuthPage() {
 
                 {/* Guest form */}
                 {showGuestForm && (
-                  <div className="space-y-3 animate-card-enter">
+                  <div className="space-y-3 md:space-y-4 lg:space-y-5 animate-card-enter">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                      <label className="text-[10px] md:text-[11px] lg:text-xs font-bold text-muted-foreground uppercase tracking-wider">
                         Your Name
                       </label>
                       <Input
                         value={guestName}
                         onChange={(e) => setGuestName(e.target.value)}
                         placeholder="Enter your name"
-                        className="h-11 rounded-xl bg-background/80 border-border/70 text-foreground"
+                        className="h-11 md:h-12 lg:h-14 md:text-base lg:text-lg rounded-xl bg-background/80 border-border/70 text-foreground"
                         onKeyDown={(e) => {
                           if (e.key === "Enter") handleGuestLogin();
                         }}
                       />
                     </div>
-                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-600 dark:text-amber-400 font-medium leading-relaxed">
+                    <div className="p-3 md:p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] md:text-xs lg:text-sm text-amber-600 dark:text-amber-400 font-medium leading-relaxed">
                       ⚠️ <strong>Local only</strong> — data won't be backed up
                       to the cloud.
                     </div>
                     <Button
                       onClick={handleGuestLogin}
                       disabled={signingIn || !guestName.trim()}
-                      className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl disabled:opacity-50"
+                      className="w-full h-11 md:h-12 lg:h-14 md:text-base lg:text-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl disabled:opacity-50"
                     >
                       {signingIn ? "Entering…" : "Start as Guest"}
                     </Button>
@@ -744,9 +744,9 @@ export default function AuthPage() {
 
                 {/* OR divider */}
                 {!showGuestForm && (
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 md:gap-4 lg:gap-5">
                     <div className="flex-1 h-px bg-border/50" />
-                    <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
+                    <span className="text-[10px] md:text-[11px] lg:text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground">
                       or
                     </span>
                     <div className="flex-1 h-px bg-border/50" />
@@ -758,25 +758,25 @@ export default function AuthPage() {
                   <Button
                     onClick={handleGoogle}
                     disabled={signingIn}
-                    className="w-full h-12 gap-3 text-sm font-semibold rounded-xl bg-background/60 hover:bg-muted/70 border border-border/70 shadow-sm active:scale-[0.98] transition-all text-foreground"
+                    className="w-full h-12 md:h-13 lg:h-15 gap-3 md:gap-4 lg:gap-5 text-sm md:text-base lg:text-lg font-semibold rounded-xl bg-background/60 hover:bg-muted/70 border border-border/70 shadow-sm active:scale-[0.98] transition-all text-foreground"
                     variant="outline"
                   >
-                    <FcGoogle size={20} />
+                    <FcGoogle className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 shrink-0" />
                     {signingIn ? "Signing in…" : "Continue with Google"}
                   </Button>
                 )}
 
                 {/* Footer */}
-                <div className="pt-3 border-t border-border/30 flex flex-col gap-1.5">
+                <div className="pt-3 md:pt-4 lg:pt-5 border-t border-border/30 flex flex-col gap-1.5 md:gap-2 lg:gap-2.5">
                   <button
                     type="button"
                     onClick={() => signInWithGoogleSelectAccount()}
-                    className="text-[11px] font-semibold text-left transition-all"
+                    className="text-[11px] md:text-xs lg:text-sm font-semibold text-left transition-all"
                     style={{ color: mounted ? primaryColor : "var(--primary)" }}
                   >
                     Use a different Google account
                   </button>
-                  <p className="text-[10px] text-muted-foreground/50 leading-relaxed">
+                  <p className="text-[10px] md:text-[11px] lg:text-xs text-muted-foreground/50 leading-relaxed">
                     By continuing, you agree to our{" "}
                     <Link
                       href="/privacy"
