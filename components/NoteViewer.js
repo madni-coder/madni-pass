@@ -211,7 +211,6 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
     const [isOnline, setIsOnline] = useState(typeof window !== "undefined" ? navigator.onLine : true);
     const fontStyle = "sans";
 
-    const [scrollTop, setScrollTop] = useState(0);
 
     const [selectedText, setSelectedText] = useState("");
     const [floatingCopyPos, setFloatingCopyPos] = useState(null);
@@ -298,6 +297,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
     const srRef = useRef(null);
     const bdRef = useRef(null);
     const taRef = useRef(null);
+    const scrollContainerRef = useRef(null);
     const fileRef = useRef(null);
     const saveTimerRef = useRef(null);
     const creatingRef = useRef(false);
@@ -371,19 +371,11 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
     const matches = findMatches(content, inSearch);
     const detectedCreds = useMemo(() => parseCredentials(content), [content]);
 
-    const syncScroll = useCallback(() => {
-        if (bdRef.current && taRef.current) {
-            bdRef.current.scrollTop = taRef.current.scrollTop;
-            bdRef.current.scrollLeft = taRef.current.scrollLeft;
-        }
-        if (taRef.current) {
-            setScrollTop(taRef.current.scrollTop);
-        }
-    }, []);
-
     useEffect(() => {
-        if (taRef.current) {
-            setScrollTop(taRef.current.scrollTop);
+        const el = taRef.current;
+        if (el) {
+            el.style.height = "auto";
+            el.style.height = `${el.scrollHeight}px`;
         }
     }, [content]);
 
@@ -394,9 +386,10 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
         setMatchIdx(i);
         ta.setSelectionRange(matches[i], matches[i] + inSearch.length);
         const linesBefore = content.slice(0, matches[i]).split("\n").length;
-        ta.scrollTop = Math.max(0, (linesBefore - 4) * 20);
-        syncScroll();
-    }, [matches, inSearch, content, syncScroll]);
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = Math.max(0, (linesBefore - 4) * 20);
+        }
+    }, [matches, inSearch, content]);
 
     const gotoMatch = useCallback((idx) => {
         scrollToMatch(idx);
@@ -930,80 +923,71 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                     )}
                 </div>
 
-                {/* Notepad area: backdrop highlight + transparent textarea on top */}
-                <div className="flex-1 relative overflow-hidden">
-                    {/* Highlight backdrop — rendered behind textarea, scrolls in sync */}
-                    <div
-                        ref={bdRef}
-                        data-bd-scroll=""
-                        aria-hidden="true"
-                        style={{
-                            ...sharedTextStyle,
-                            color: "var(--foreground)",
-                            position: "absolute",
-                            inset: 0,
-                            overflow: "auto",
-                            overflowX: "hidden",
-                            msOverflowStyle: "none",
-                            scrollbarWidth: "none",
-                            pointerEvents: "none",
-                            margin: 0,
-                            border: "none",
-                            zIndex: 0,
-                            display: inSearch ? "block" : "none",
-                        }}
-                        dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-                    />
-                    {/* Textarea — transparent text, visible caret */}
-                    <textarea
-                        ref={taRef}
-                        value={content}
-                        onChange={(e) => { setContent(e.target.value); syncScroll(); }}
-                        onScroll={(e) => {
-                            syncScroll();
-                            setFloatingCopyPos(null);
-                            setSelectedText("");
-                        }}
-                        onKeyDown={(e) => {
-                            if ((e.metaKey || e.ctrlKey) && e.key === "f") { e.preventDefault(); srRef.current?.focus(); }
-                        }}
-                        onPointerUp={handleTextareaSelection}
-                        onKeyUp={handleTextareaSelection}
-                        onPointerDown={handlePointerDown}
-                        readOnly={note?.inBin}
-                        style={{
-                            ...sharedTextStyle,
-                            position: "absolute",
-                            inset: 0,
-                            width: "100%",
-                            height: "100%",
-                            background: "transparent",
-                            color: inSearch ? "transparent" : "var(--foreground)",
-                            caretColor: "var(--foreground)",
-                            resize: "none",
-                            outline: "none",
-                            zIndex: 1,
-                            overflowY: "auto",
-                            willChange: "scroll-position",
-                        }}
-                        placeholder="Write your notes here..."
-                        spellCheck={false}
-                    />
-                    {/* Floating inline copy buttons layer */}
-                    <div
-                        style={{
-                            position: "absolute",
-                            inset: 0,
-                            pointerEvents: "none",
-                            zIndex: 2,
-                            overflow: "hidden"
-                        }}
-                    >
+                {/* Scrollable Content Container */}
+                <div
+                    ref={scrollContainerRef}
+                    className="flex-1 overflow-y-auto"
+                    onScroll={() => {
+                        setFloatingCopyPos(null);
+                        setSelectedText("");
+                    }}
+                >
+                    <div className="relative">
+                        {/* Highlight backdrop — rendered behind textarea */}
+                        <div
+                            ref={bdRef}
+                            aria-hidden="true"
+                            style={{
+                                ...sharedTextStyle,
+                                color: "var(--foreground)",
+                                position: "absolute",
+                                inset: 0,
+                                pointerEvents: "none",
+                                margin: 0,
+                                border: "none",
+                                zIndex: 0,
+                                display: inSearch ? "block" : "none",
+                                overflow: "hidden",
+                            }}
+                            dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+                        />
+                        {/* Textarea — transparent text, visible caret */}
+                        <textarea
+                            ref={taRef}
+                            value={content}
+                            onChange={(e) => { setContent(e.target.value); }}
+                            onKeyDown={(e) => {
+                                if ((e.metaKey || e.ctrlKey) && e.key === "f") { e.preventDefault(); srRef.current?.focus(); }
+                            }}
+                            onPointerUp={handleTextareaSelection}
+                            onKeyUp={handleTextareaSelection}
+                            onPointerDown={handlePointerDown}
+                            readOnly={note?.inBin}
+                            style={{
+                                ...sharedTextStyle,
+                                position: "relative",
+                                width: "100%",
+                                height: "auto",
+                                background: "transparent",
+                                color: inSearch ? "transparent" : "var(--foreground)",
+                                caretColor: "var(--foreground)",
+                                resize: "none",
+                                outline: "none",
+                                zIndex: 1,
+                                overflowY: "hidden",
+                                willChange: "height",
+                            }}
+                            placeholder="Write your notes here..."
+                            spellCheck={false}
+                        />
+                        {/* Floating inline copy buttons layer */}
                         <div
                             style={{
-                                transform: `translateY(-${scrollTop}px)`,
-                                position: "relative",
-                                height: taRef.current?.scrollHeight || "100%",
+                                position: "absolute",
+                                inset: 0,
+                                pointerEvents: "none",
+                                zIndex: 2,
+                                overflow: "hidden"
                             }}
                         >
                             {detectedCreds.map((cred, idx) => {
@@ -1039,75 +1023,75 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                                 );
                             })}
                         </div>
-                    </div>
 
-                    {/* Floating Selection Copy Button */}
-                    {floatingCopyPos && selectedText && (
-                        <button
-                            onClick={handleFloatingCopy}
-                            onMouseDown={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                            }}
-                            onPointerDown={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                            }}
-                            style={{
-                                position: "absolute",
-                                left: `${floatingCopyPos.x}px`,
-                                top: `${floatingCopyPos.y}px`,
-                                transform: "translateX(-50%)",
-                                zIndex: 50,
-                                pointerEvents: "auto",
-                            }}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg shadow-black/30 border transition-all duration-150 active:scale-95 animate-tooltip-center select-none ${
-                                selectionCopied
-                                    ? "bg-green-600 border-green-500 text-white"
-                                    : "bg-popover/95 backdrop-blur-md border-border/80 text-foreground hover:bg-accent hover:text-accent-foreground"
-                            }`}
-                        >
-                            {selectionCopied ? (
-                                <>
-                                    <FiCheck size={13} className="text-white" />
-                                    <span>Copied</span>
-                                </>
-                            ) : (
-                                <>
-                                    <FiCopy size={13} />
-                                    <span>Copy</span>
-                                </>
-                            )}
-                        </button>
-                    )}
-                </div>
-
-                {/* Inline full-size image previews */}
-                {noteCreated && images.length > 0 && (
-                    <div className="border-t border-border/40 overflow-y-auto flex flex-col gap-3 px-5 py-4" style={{ maxHeight: "45vh" }}>
-                        {displayImages.map((img, idx) =>
-                            img.displaySrc ? (
-                                <div key={idx} className="block">
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img
-                                        src={img.displaySrc}
-                                        alt={img.name}
-                                        style={{
-                                            maxWidth: "100%",
-                                            maxHeight: "40vh",
-                                            width: "auto",
-                                            height: "auto",
-                                            objectFit: "contain",
-                                            borderRadius: "0.5rem",
-                                            border: "1px solid var(--border)",
-                                            display: "block",
-                                        }}
-                                    />
-                                </div>
-                            ) : null
+                        {/* Floating Selection Copy Button */}
+                        {floatingCopyPos && selectedText && (
+                            <button
+                                onClick={handleFloatingCopy}
+                                onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                }}
+                                onPointerDown={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                }}
+                                style={{
+                                    position: "absolute",
+                                    left: `${floatingCopyPos.x}px`,
+                                    top: `${floatingCopyPos.y}px`,
+                                    transform: "translateX(-50%)",
+                                    zIndex: 50,
+                                    pointerEvents: "auto",
+                                }}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg shadow-black/30 border transition-all duration-150 active:scale-95 animate-tooltip-center select-none ${
+                                    selectionCopied
+                                        ? "bg-green-600 border-green-500 text-white"
+                                        : "bg-popover/95 backdrop-blur-md border-border/80 text-foreground hover:bg-accent hover:text-accent-foreground"
+                                }`}
+                            >
+                                {selectionCopied ? (
+                                    <>
+                                        <FiCheck size={13} className="text-white" />
+                                        <span>Copied</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <FiCopy size={13} />
+                                        <span>Copy</span>
+                                    </>
+                                )}
+                            </button>
                         )}
                     </div>
-                )}
+
+                    {/* Inline full-size image previews */}
+                    {noteCreated && images.length > 0 && (
+                        <div className="border-t border-border/40 flex flex-col gap-3 px-5 py-4 pb-8">
+                            {displayImages.map((img, idx) =>
+                                img.displaySrc ? (
+                                    <div key={idx} className="block">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                            src={img.displaySrc}
+                                            alt={img.name}
+                                            style={{
+                                                maxWidth: "100%",
+                                                maxHeight: "60vh",
+                                                width: "auto",
+                                                height: "auto",
+                                                objectFit: "contain",
+                                                borderRadius: "0.5rem",
+                                                border: "1px solid var(--border)",
+                                                display: "block",
+                                            }}
+                                        />
+                                    </div>
+                                ) : null
+                            )}
+                        </div>
+                    )}
+                </div>
 
                 {/* Bottom credential strip removed — inline floating copy remains */}
 
