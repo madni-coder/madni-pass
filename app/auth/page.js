@@ -11,6 +11,89 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 /* ─────────────────────────────────────────────────────
+   Web Audio API Synthesizer for Lamp Interaction Sounds
+ ───────────────────────────────────────────────────── */
+let pullAudio = null;
+
+const initAudio = () => {
+  if (typeof window === "undefined") return;
+  if (!pullAudio) {
+    pullAudio = new Audio("/chainSound.mp3");
+    pullAudio.preload = "auto";
+  }
+};
+
+const unlockAudio = () => {
+  initAudio();
+  if (pullAudio) {
+    pullAudio.play().then(() => {
+      pullAudio.pause();
+      pullAudio.currentTime = 0;
+    }).catch(() => {});
+  }
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (AudioContext) {
+      const ctx = new AudioContext();
+      if (ctx.state === "suspended") {
+        ctx.resume();
+      }
+    }
+  } catch (e) {}
+
+  window.removeEventListener("click", unlockAudio);
+  window.removeEventListener("touchstart", unlockAudio);
+  window.removeEventListener("keydown", unlockAudio);
+};
+
+if (typeof window !== "undefined") {
+  window.addEventListener("click", unlockAudio, { passive: true });
+  window.addEventListener("touchstart", unlockAudio, { passive: true });
+  window.addEventListener("keydown", unlockAudio, { passive: true });
+}
+
+const playSound = (type) => {
+  if (typeof window === "undefined") return Promise.resolve();
+
+  try {
+    if (type === "pull") {
+      initAudio();
+      if (pullAudio) {
+        pullAudio.currentTime = 0;
+        return pullAudio.play();
+      }
+      return Promise.resolve();
+    }
+
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+
+    if (type === "tap") {
+      // Nice resonant glass/metallic chime/ping for tap
+      const now = ctx.currentTime;
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(980, now);
+      osc.frequency.exponentialRampToValueAtTime(490, now + 0.2);
+
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(now + 0.2);
+    }
+  } catch (e) {
+    console.error("Failed to play interaction sound:", e);
+  }
+};
+
+/* ─────────────────────────────────────────────────────
    Animated Lamp SVG – interactive pull-cord toggle
 ───────────────────────────────────────────────────── */
 function LampSVG({ isOn, onToggle, color, isDark }) {
@@ -18,6 +101,7 @@ function LampSVG({ isOn, onToggle, color, isDark }) {
   const [handleDy, setHandleDy] = useState(0);
   const startYRef = useRef(0);
   const latestDyRef = useRef(0);
+  const playPullOnReleaseRef = useRef(false);
 
   const THRESHOLD = 28;
   const MAX_DY = 68;
@@ -40,20 +124,30 @@ function LampSVG({ isOn, onToggle, color, isDark }) {
   /* ── Drag / click handlers ── */
   const handleLampClick = useCallback(() => {
     onToggle();
+    playSound("tap");
   }, [onToggle]);
 
   const beginDrag = useCallback((e) => {
-    e.preventDefault();
     startYRef.current = e.touches ? e.touches[0].clientY : e.clientY;
     latestDyRef.current = 0;
     setHandleDy(0);
     setDragging(true);
+    
+    const promise = playSound("pull");
+    if (promise && typeof promise.catch === "function") {
+      promise.catch((err) => {
+        if (err.name === "NotAllowedError" || err.message?.includes("interact")) {
+          playPullOnReleaseRef.current = true;
+        }
+      });
+    }
   }, []);
 
   useEffect(() => {
     if (!dragging) return;
 
     const onMove = (e) => {
+      if (e.cancelable) e.preventDefault();
       const cy = e.touches ? e.touches[0].clientY : e.clientY;
       const dist = Math.max(0, Math.min(MAX_DY, cy - startYRef.current));
       latestDyRef.current = dist;
@@ -65,6 +159,11 @@ function LampSVG({ isOn, onToggle, color, isDark }) {
       if (d < 5 || d >= THRESHOLD) onToggle();
       setDragging(false);
       setHandleDy(0);
+
+      if (playPullOnReleaseRef.current) {
+        playPullOnReleaseRef.current = false;
+        playSound("pull");
+      }
     };
 
     window.addEventListener("mousemove", onMove);
@@ -433,8 +532,8 @@ export default function AuthPage() {
           typeof window !== "undefined" && !!window.__TAURI_INTERNALS__;
         if (isTauri) {
           import("@tauri-apps/api/core")
-            .then(({ invoke }) => invoke("exit_app").catch(() => {}))
-            .catch(() => {});
+            .then(({ invoke }) => invoke("exit_app").catch(() => { }))
+            .catch(() => { });
         }
       }
     };
@@ -488,9 +587,8 @@ export default function AuthPage() {
   if (loading || !introCompleted) {
     return (
       <div
-        className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-background bg-auth-pattern transition-all duration-300 ${
-          introFadeOut && !loading ? "animate-intro-container-fadeout" : ""
-        }`}
+        className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-background bg-auth-pattern transition-all duration-300 ${introFadeOut && !loading ? "animate-intro-container-fadeout" : ""
+          }`}
       >
         {mounted && (
           <button
