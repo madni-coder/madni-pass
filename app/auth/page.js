@@ -29,11 +29,13 @@ function LampSVG({ isOn, onToggle, color, isDark }) {
   const handleY = HANDLE_BASE_Y + handleDy;
 
   // Theme-aware "off" colours
-  const offShade = isDark ? "#1c2333" : "#8898b0";
-  const offRim = isDark ? "#242d3e" : "#98a0b8";
-  const offPole = isDark ? "#46505e" : "#8090a0";
-  const offBase = isDark ? "#38404e" : "#909098";
-  const offCord = isDark ? "#3e4858" : "#8898a8";
+  const offShade = isDark ? "#283446" : "#cbd5e1";
+  const offRim = isDark ? "#37475f" : "#94a3b8";
+  const offPole = isDark ? "#5c6d84" : "#718096";
+  const offBase = isDark ? "#46556b" : "#a0aec0";
+  const offCord = isDark ? "#5c6d84" : "#718096";
+
+  const beamColor = isDark ? color : "#fbbf24";
 
   /* ── Drag / click handlers ── */
   const handleLampClick = useCallback(() => {
@@ -91,10 +93,10 @@ function LampSVG({ isOn, onToggle, color, isDark }) {
         <radialGradient id="coneGrad" cx="50%" cy="0%" r="85%">
           <stop
             offset="0%"
-            stopColor={color}
-            stopOpacity={isOn ? "0.28" : "0"}
+            stopColor={beamColor}
+            stopOpacity={isOn ? (isDark ? "0.28" : "0.35") : "0"}
           />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
+          <stop offset="100%" stopColor={beamColor} stopOpacity="0" />
         </radialGradient>
 
         {/* Shade fill gradient */}
@@ -120,7 +122,7 @@ function LampSVG({ isOn, onToggle, color, isDark }) {
       <polygon
         points="50,152 150,152 192,282 8,282"
         fill="url(#coneGrad)"
-        style={{ opacity: isOn ? 1 : 0, transition: "opacity 0.9s" }}
+        style={{ opacity: isOn && isDark ? 1 : 0, transition: "opacity 0.9s" }}
       />
 
       {/* ══ Lamp body – clickable to toggle ══ */}
@@ -136,7 +138,7 @@ function LampSVG({ isOn, onToggle, color, isDark }) {
           fill="url(#shadeGrad)"
           stroke={isOn ? color : offRim}
           strokeWidth="1.5"
-          filter={isOn ? "url(#shadeGlow)" : "none"}
+          filter={isOn && isDark ? "url(#shadeGlow)" : "none"}
           style={{ transition: "stroke 0.6s" }}
         />
 
@@ -166,7 +168,7 @@ function LampSVG({ isOn, onToggle, color, isDark }) {
           cy="152"
           rx="44"
           ry="8"
-          fill={isOn ? "#fff9e0" : isDark ? "#0b0f1c" : "#c0c8d4"}
+          fill={isOn ? "#fff9e0" : isDark ? "#141b27" : "#b0c0d0"}
           opacity={isOn ? 0.8 : 1}
           style={{ transition: "fill 0.7s, opacity 0.7s" }}
         />
@@ -224,14 +226,14 @@ function LampSVG({ isOn, onToggle, color, isDark }) {
           {/* Closed-eye arcs */}
           <path
             d="M 82,94 Q 87,88 92,94"
-            stroke={isDark ? "#4e5868" : "#8890a8"}
+            stroke={isDark ? "#8a9cb4" : "#5a6b82"}
             strokeWidth="2.2"
             fill="none"
             strokeLinecap="round"
           />
           <path
             d="M 108,94 Q 113,88 118,94"
-            stroke={isDark ? "#4e5868" : "#8890a8"}
+            stroke={isDark ? "#8a9cb4" : "#5a6b82"}
             strokeWidth="2.2"
             fill="none"
             strokeLinecap="round"
@@ -239,7 +241,7 @@ function LampSVG({ isOn, onToggle, color, isDark }) {
           {/* Neutral mouth */}
           <path
             d="M 90,111 Q 100,115 110,111"
-            stroke={isDark ? "#3a4455" : "#6878a0"}
+            stroke={isDark ? "#71859e" : "#4a5a70"}
             strokeWidth="1.8"
             fill="none"
             strokeLinecap="round"
@@ -249,7 +251,8 @@ function LampSVG({ isOn, onToggle, color, isDark }) {
             x="121"
             y="83"
             fontSize="9"
-            fill={isDark ? "#3c4860" : "#6878a8"}
+            fill={isDark ? "#4cc9d0" : "#bb5e3a"}
+            opacity={0.8}
             fontFamily="sans-serif"
             fontWeight="600"
           >
@@ -259,7 +262,8 @@ function LampSVG({ isOn, onToggle, color, isDark }) {
             x="129"
             y="75"
             fontSize="7"
-            fill={isDark ? "#2e3a50" : "#5868a0"}
+            fill={isDark ? "#4cc9d0" : "#bb5e3a"}
+            opacity={0.5}
             fontFamily="sans-serif"
             fontWeight="600"
           >
@@ -269,7 +273,8 @@ function LampSVG({ isOn, onToggle, color, isDark }) {
             x="135"
             y="68"
             fontSize="5"
-            fill={isDark ? "#242e3e" : "#485888"}
+            fill={isDark ? "#4cc9d0" : "#bb5e3a"}
+            opacity={0.3}
             fontFamily="sans-serif"
             fontWeight="600"
           >
@@ -335,7 +340,7 @@ function LampSVG({ isOn, onToggle, color, isDark }) {
         cx={HANDLE_BASE_X}
         cy={handleY}
         r="8"
-        fill={isOn ? "#c4cad8" : isDark ? "#3e4858" : "#8098a8"}
+        fill={isOn ? "#c4cad8" : isDark ? "#5c6d84" : "#a0aec0"}
         stroke={isOn ? "#9aa0b0" : offCord}
         strokeWidth="1.5"
         style={{
@@ -347,20 +352,20 @@ function LampSVG({ isOn, onToggle, color, isDark }) {
 
       {/* Pull-down arrow hint when lamp is off */}
       {!isOn && !dragging && (
-        <g style={{ opacity: 0.42 }}>
+        <g style={{ opacity: 0.65 }}>
           <line
             x1={HANDLE_BASE_X}
             y1={handleY + 13}
             x2={HANDLE_BASE_X}
             y2={handleY + 22}
-            stroke={isDark ? "#4e5870" : "#808898"}
-            strokeWidth="1.5"
+            stroke={color}
+            strokeWidth="1.8"
             strokeLinecap="round"
           />
           <polyline
             points={`${HANDLE_BASE_X - 4},${handleY + 19} ${HANDLE_BASE_X},${handleY + 24} ${HANDLE_BASE_X + 4},${handleY + 19}`}
-            stroke={isDark ? "#4e5870" : "#808898"}
-            strokeWidth="1.5"
+            stroke={color}
+            strokeWidth="1.8"
             fill="none"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -550,7 +555,9 @@ export default function AuthPage() {
         style={{
           opacity: lampOn ? 1 : 0,
           background: mounted
-            ? `radial-gradient(ellipse 55% 70% at 22% 52%, ${primaryColor}18 0%, transparent 70%)`
+            ? isDark
+              ? `radial-gradient(ellipse 55% 70% at 22% 52%, ${primaryColor}18 0%, transparent 70%)`
+              : "none"
             : "none",
         }}
       />
@@ -618,9 +625,11 @@ export default function AuthPage() {
             <div
               className="rounded-3xl border bg-card backdrop-blur-2xl overflow-hidden"
               style={{
-                borderColor: mounted ? `${primaryColor}42` : "var(--border)",
+                borderColor: mounted ? (isDark ? `${primaryColor}42` : "var(--border)") : "var(--border)",
                 boxShadow: mounted
-                  ? `0 0 0 1px ${primaryColor}28, 0 12px 60px ${primaryColor}16, 0 24px 70px rgba(0,0,0,0.22)`
+                  ? isDark
+                    ? `0 0 0 1px ${primaryColor}28, 0 12px 60px ${primaryColor}16, 0 24px 70px rgba(0,0,0,0.22)`
+                    : `0 1px 2px rgba(0,0,0,0.05), 0 8px 32px rgba(0,0,0,0.04)`
                   : "none",
                 transition: "border-color 0.7s, box-shadow 0.7s",
               }}
@@ -630,7 +639,9 @@ export default function AuthPage() {
                 style={{
                   height: "2px",
                   background: mounted
-                    ? `linear-gradient(90deg, transparent 0%, ${primaryColor}88 40%, ${primaryColor}88 60%, transparent 100%)`
+                    ? isDark
+                      ? `linear-gradient(90deg, transparent 0%, ${primaryColor}88 40%, ${primaryColor}88 60%, transparent 100%)`
+                      : "transparent"
                     : "transparent",
                   transition: "opacity 0.7s",
                   opacity: lampOn ? 1 : 0,
@@ -767,16 +778,16 @@ export default function AuthPage() {
                 )}
 
                 {/* Footer */}
-                <div className="pt-3 md:pt-4 lg:pt-5 border-t border-border/30 flex flex-col gap-1.5 md:gap-2 lg:gap-2.5">
+                <div className="pt-3 md:pt-4 lg:pt-5 border-t border-border/30 flex flex-col items-center text-center gap-1.5 md:gap-2 lg:gap-2.5">
                   <button
                     type="button"
                     onClick={() => signInWithGoogleSelectAccount()}
-                    className="text-[11px] md:text-xs lg:text-sm font-semibold text-left transition-all"
+                    className="text-[11px] md:text-xs lg:text-sm font-semibold transition-all text-center"
                     style={{ color: mounted ? primaryColor : "var(--primary)" }}
                   >
                     Use a different Google account
                   </button>
-                  <p className="text-[10px] md:text-[11px] lg:text-xs text-muted-foreground/50 leading-relaxed">
+                  <p className="text-[10px] md:text-[11px] lg:text-xs text-muted-foreground/50 leading-relaxed text-center">
                     By continuing, you agree to our{" "}
                     <Link
                       href="/privacy"
