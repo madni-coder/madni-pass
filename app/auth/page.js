@@ -13,42 +13,73 @@ import { Input } from "@/components/ui/input";
 /* ─────────────────────────────────────────────────────
    Web Audio API Synthesizer for Lamp Interaction Sounds
  ───────────────────────────────────────────────────── */
-let pullAudio = null;
+let globalCtx = null;
+const getAudioContext = () => {
+  if (typeof window === "undefined") return null;
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) return null;
+  if (!globalCtx) {
+    globalCtx = new AudioContext();
+  }
+  return globalCtx;
+};
 
-const initAudio = () => {
-  if (typeof window === "undefined") return;
-  if (!pullAudio) {
-    pullAudio = new Audio("/chainSound.mp3");
-    pullAudio.preload = "auto";
+const playAcousticShimmer = (ctx) => {
+  for (let i = 0; i < 4; i++) {
+    setTimeout(() => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      const f = [523.25, 659.25, 783.99, 1046.50][i];
+      osc.frequency.setValueAtTime(f, ctx.currentTime);
+      gain.gain.setValueAtTime(0.03, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.25);
+    }, i * 60);
   }
 };
 
+const playTapSound = (ctx) => {
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(980, now);
+  osc.frequency.exponentialRampToValueAtTime(490, now + 0.2);
+
+  gain.gain.setValueAtTime(0.12, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(now + 0.2);
+};
+
 const unlockAudio = () => {
-  initAudio();
-  if (pullAudio) {
-    pullAudio.play().then(() => {
-      pullAudio.pause();
-      pullAudio.currentTime = 0;
-    }).catch(() => {});
-  }
   try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (AudioContext) {
-      const ctx = new AudioContext();
-      if (ctx.state === "suspended") {
-        ctx.resume();
-      }
+    const ctx = getAudioContext();
+    if (ctx && ctx.state === "suspended") {
+      ctx.resume();
     }
   } catch (e) {}
 
   window.removeEventListener("click", unlockAudio);
   window.removeEventListener("touchstart", unlockAudio);
+  window.removeEventListener("touchend", unlockAudio);
+  window.removeEventListener("mouseup", unlockAudio);
   window.removeEventListener("keydown", unlockAudio);
 };
 
 if (typeof window !== "undefined") {
   window.addEventListener("click", unlockAudio, { passive: true });
   window.addEventListener("touchstart", unlockAudio, { passive: true });
+  window.addEventListener("touchend", unlockAudio, { passive: true });
+  window.addEventListener("mouseup", unlockAudio, { passive: true });
   window.addEventListener("keydown", unlockAudio, { passive: true });
 }
 
@@ -56,41 +87,40 @@ const playSound = (type) => {
   if (typeof window === "undefined") return Promise.resolve();
 
   try {
+    const ctx = getAudioContext();
+    if (!ctx) return Promise.resolve();
+
     if (type === "pull") {
-      initAudio();
-      if (pullAudio) {
-        pullAudio.currentTime = 0;
-        return pullAudio.play();
+      if (ctx.state === "suspended") {
+        return ctx.resume().then(() => {
+          if (ctx.state === "suspended") {
+            return Promise.reject(new Error("AudioContext suspended"));
+          }
+          playAcousticShimmer(ctx);
+          return Promise.resolve();
+        }).catch(() => {
+          return Promise.reject(new Error("AudioContext suspended"));
+        });
       }
+
+      playAcousticShimmer(ctx);
       return Promise.resolve();
     }
 
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
-
     if (type === "tap") {
-      // Nice resonant glass/metallic chime/ping for tap
-      const now = ctx.currentTime;
-
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(980, now);
-      osc.frequency.exponentialRampToValueAtTime(490, now + 0.2);
-
-      gain.gain.setValueAtTime(0.12, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(now + 0.2);
+      if (ctx.state === "suspended") {
+        return ctx.resume().then(() => {
+          playTapSound(ctx);
+          return Promise.resolve();
+        }).catch(() => {});
+      }
+      playTapSound(ctx);
+      return Promise.resolve();
     }
   } catch (e) {
     console.error("Failed to play interaction sound:", e);
   }
+  return Promise.resolve();
 };
 
 /* ─────────────────────────────────────────────────────
