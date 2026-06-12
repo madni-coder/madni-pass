@@ -454,7 +454,38 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
         if (!file) return;
         if (file.size > 10 * 1024 * 1024) { notify("Image size must be smaller than 10MB", "error"); return; }
         if (images.length >= 4) { notify("You can upload a maximum of 4 images per note", "error"); return; }
-        if (!noteCreated) { notify("Please add a title before attaching an image", "error"); return; }
+        
+        if (!noteCreated) {
+            if (!title.trim()) {
+                notify("Please add a title before attaching an image", "error");
+                e.target.value = "";
+                return;
+            }
+            setUploading(true);
+            try {
+                const master = userId;
+                const encTitle = encrypt(title.trim(), master);
+                const encContent = encrypt(content, master);
+                const id = await createNote(userId, folderId ?? null, encTitle, encContent, noteIdRef.current);
+                noteIdRef.current = id;
+                setNoteCreated(true);
+                
+                const imgData = await storeImage(file, master);
+                const newImgs = [imgData];
+                setImages(newImgs);
+                await updateNote(id, encTitle, encContent, newImgs);
+                onSave({ id, title: title.trim(), content, images: newImgs, pinHash: notePinHash, isPinned: noteIsPinned });
+                isDirtyRef.current = false;
+                notify("Image attached!");
+            } catch (err) {
+                notify("Failed to upload image: " + (err?.message || err), "error");
+            } finally {
+                setUploading(false);
+                e.target.value = "";
+            }
+            return;
+        }
+
         setUploading(true);
         try {
             const master = userId;
@@ -464,7 +495,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
             const encTitle = encrypt(title, master);
             const encContent = encrypt(content, master);
             await updateNote(noteIdRef.current, encTitle, encContent, newImgs);
-            onSave({ id: noteIdRef.current, title, content, images: newImgs, pinHash: notePinHash });
+            onSave({ id: noteIdRef.current, title, content, images: newImgs, pinHash: notePinHash, isPinned: noteIsPinned });
             isDirtyRef.current = false;
             notify("Image attached!");
         } catch (err) { notify("Failed to upload image: " + (err?.message || err), "error"); }
@@ -729,6 +760,15 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                                         className="flex items-center gap-2.5 mx-2 my-1.5 px-3 py-2 text-sm text-left rounded-md border border-primary/25 bg-primary/10 text-primary hover:bg-primary/20 transition-all duration-150 active:scale-95 font-semibold"
                                     >
                                         <span><FiPlus size={13} className="text-primary" /></span>Add Numbers
+                                    </button>
+                                    <div style={{ height: 1, background: "var(--border)", margin: "3px 0" }} />
+                                    <button
+                                        disabled={uploading || images.length >= 4}
+                                        onClick={() => { fileRef.current?.click(); setMenuOpen(false); }}
+                                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-foreground hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                                        title={images.length >= 4 ? "Maximum 4 images allowed" : "Add Image"}
+                                    >
+                                        <span className="text-muted-foreground"><FiImage size={13} /></span>Add Image
                                     </button>
                                     <div style={{ height: 1, background: "var(--border)", margin: "3px 0" }} />
                                     <button onClick={() => { handleCopy(); setMenuOpen(false); }}
@@ -1072,7 +1112,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                 {/* Bottom credential strip removed — inline floating copy remains */}
 
                 {/* Images row */}
-                {noteCreated && (
+                {noteCreated && (images.length > 0 || uploading) && (
                     <div className="border-t border-border px-5 py-3 flex items-center gap-2 flex-wrap">
                         {displayImages.map((img, idx) => {
                             const isFirst = idx === 0;
@@ -1137,14 +1177,11 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                                 </div>
                             );
                         })}
-                        <button onClick={() => fileRef.current?.click()} disabled={uploading || images.length >= 4}
-                            className={`w-14 h-14 border-2 border-dashed rounded-lg flex items-center justify-center transition-colors shrink-0 ${images.length >= 4
-                                ? "border-border/40 text-muted-foreground/30 cursor-not-allowed opacity-50"
-                                : "border-border text-muted-foreground/60 hover:border-primary hover:text-primary"
-                                }`}>
-                            {uploading ? <FiLoader size={16} className="animate-spin" /> : <FiImage size={16} />}
-                        </button>
-                        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                        {uploading && (
+                            <div className="w-14 h-14 bg-muted rounded-lg border border-border flex items-center justify-center shrink-0">
+                                <FiLoader size={16} className="animate-spin text-muted-foreground/60" />
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -1210,6 +1247,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                     onCancel={() => setPinAction(null)}
                 />
             )}
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
         </>
     );
 }

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FiFolder, FiPlus, FiMoreHorizontal, FiEdit2, FiTrash2, FiLock, FiUnlock, FiMenu, FiX, FiSun, FiMoon, FiSearch, FiSettings } from "react-icons/fi";
+import { FiFolder, FiPlus, FiMoreHorizontal, FiEdit2, FiTrash2, FiLock, FiUnlock, FiMenu, FiX, FiSun, FiMoon, FiSearch, FiSettings, FiExternalLink, FiShield, FiInfo } from "react-icons/fi";
 import { BiFolderOpen } from "react-icons/bi";
 import { FaPowerOff } from "react-icons/fa";
 import { createFolder, updateFolder, deleteFolder, updateFolderPin, setUserPinHash } from "@/lib/db";
@@ -20,12 +20,30 @@ import { notify } from "@/lib/notify";
 import { useTheme } from "next-themes";
 import PinLockScreen from "./PinLockScreen";
 import CryptoJS from "crypto-js";
+import Link from "next/link";
 
 export default function Sidebar({ folders, setFolders, selectedFolder, onSelectFolder, userId, userEmail, onLogout, mobileOpen, setMobileOpen, viewingBin, onSelectBin, unlockedFolders = [], onUnlockFolder, globalPinHash, setGlobalPinHash }) {
     const { theme, setTheme } = useTheme();
     const logoSrc = (theme === "light") ? "/lightLogo.png" : "/lazyNoteIcon.png";
     const { user, deleteAccount } = useAuth();
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [currentVersion, setCurrentVersion] = useState("0.0.0");
+    const [platformName, setPlatformName] = useState("Web");
+
+    useEffect(() => {
+        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        if (isIOS) {
+            setCurrentVersion(process.env.NEXT_PUBLIC_IOS_VERSION || "0.0.0");
+            setPlatformName("iOS");
+        } else if (isAndroid) {
+            setCurrentVersion(process.env.NEXT_PUBLIC_ANDROID_VERSION || "0.0.0");
+            setPlatformName("Android");
+        } else {
+            setCurrentVersion(process.env.NEXT_PUBLIC_WEB_VERSION || "0.0.0");
+            setPlatformName("Web");
+        }
+    }, []);
     const [deleteAccountConfirm, setDeleteAccountConfirm] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const rawFirst = user?.displayName ? user.displayName.split(" ")[0] : (user?.email ? user.email.split("@")[0] : "");
@@ -492,6 +510,32 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                                 <FiTrash2 size={13} />
                                 <span>Delete Account</span>
                             </Button>
+                        </div>
+
+                        <div className="pt-5 border-t border-border/40 space-y-3.5">
+                            <div className="flex items-center justify-between gap-3 text-xs">
+                                <Link 
+                                    href="/privacy" 
+                                    target="_blank" 
+                                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary font-medium hover:bg-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150"
+                                >
+                                    <FiShield size={14} />
+                                    <span>Privacy Policy</span>
+                                    <FiExternalLink size={11} className="opacity-60" />
+                                </Link>
+                                
+                                <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-muted border border-border/60 text-muted-foreground font-mono font-medium">
+                                    <FiInfo size={14} className="text-muted-foreground/80" />
+                                    <span>v{currentVersion} </span>
+                                </div>
+                            </div>
+
+                            <div className="pt-2 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground/60 border-t border-border/20">
+                                <span>Developed by</span>
+                                <span className="font-semibold text-foreground/80 hover:text-primary transition-colors duration-150">
+                                    Asad Madni
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </DialogContent>
