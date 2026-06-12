@@ -505,6 +505,7 @@ export default function AuthPage() {
 
   const activeTheme = mounted ? resolvedTheme : "dark";
   const isDark = activeTheme === "dark";
+  const isApp = mounted && typeof window !== "undefined" && !!window.__TAURI_INTERNALS__;
   const primaryColor = isDark ? "#4cc9d0" : "#bb5e3a";
 
   /* ── Intro timing ── */
@@ -593,7 +594,10 @@ export default function AuthPage() {
         {mounted && (
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="fixed top-[calc(1.5rem+env(safe-area-inset-top,0px))] right-6 z-50 w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 flex items-center justify-center rounded-xl bg-card border border-border/80 text-foreground hover:bg-muted/80 shadow-md active:scale-95 transition-all duration-150"
+            className="fixed right-6 z-50 w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 flex items-center justify-center rounded-xl bg-card border border-border/80 text-foreground hover:bg-muted/80 shadow-md active:scale-95 transition-all duration-150"
+            style={{
+              top: isApp ? "calc(2.8rem + env(safe-area-inset-top, 0px))" : "calc(1.5rem + env(safe-area-inset-top, 0px))"
+            }}
             aria-label="Toggle Theme"
           >
             {theme === "dark" ? (
@@ -664,7 +668,10 @@ export default function AuthPage() {
       {mounted && (
         <button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="fixed top-[calc(1.5rem+env(safe-area-inset-top,0px))] right-6 z-50 w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 flex items-center justify-center rounded-xl bg-card border border-border/80 text-foreground hover:bg-muted/80 shadow-md active:scale-95 transition-all duration-150"
+          className="fixed right-6 z-50 w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 flex items-center justify-center rounded-xl bg-card border border-border/80 text-foreground hover:bg-muted/80 shadow-md active:scale-95 transition-all duration-150"
+          style={{
+            top: isApp ? "calc(2.8rem + env(safe-area-inset-top, 0px))" : "calc(1.5rem + env(safe-area-inset-top, 0px))"
+          }}
           aria-label="Toggle Theme"
         >
           {theme === "dark" ? (
@@ -676,7 +683,7 @@ export default function AuthPage() {
       )}
 
       {/* ── Content ── */}
-      <div className="relative z-10 w-full max-w-5xl lg:max-w-6xl xl:max-w-7xl mx-auto px-5 flex flex-col md:flex-row items-center justify-center h-[100dvh] md:h-auto md:min-h-0 md:py-16 overflow-hidden md:overflow-visible">
+      <div className={`relative z-10 w-full max-w-5xl lg:max-w-6xl xl:max-w-7xl mx-auto px-5 flex flex-col md:flex-row items-center justify-center h-[100dvh] md:h-auto md:min-h-0 md:py-16 overflow-hidden md:overflow-visible ${isApp ? "pt-12 md:pt-0" : ""}`}>
         {/* ══ Lamp section ══ */}
         <div className="flex flex-col items-center gap-2 md:gap-3 lg:gap-4 shrink-0 h-[min(210px,42dvh)] md:h-auto justify-end pb-1 md:pb-0">
           <div className="flex-1 w-[165px] md:w-[340px] md:h-[440px] lg:w-[420px] lg:h-[540px] md:flex-none">
