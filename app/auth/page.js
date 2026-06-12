@@ -1,7 +1,8 @@
 "use client";
+
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { FcGoogle } from "react-icons/fc";
@@ -9,283 +10,790 @@ import { FiSun, FiMoon } from "react-icons/fi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export default function AuthPage() {
-    const { user, signInWithGoogle, signInWithGoogleSelectAccount, forgetLastGoogleEmail, signInAsGuest, loading } = useAuth();
-    const { theme, setTheme, resolvedTheme } = useTheme();
-    const router = useRouter();
-    const [signingIn, setSigningIn] = useState(false);
-    const [error, setError] = useState("");
-    const [showGuestForm, setShowGuestForm] = useState(false);
-    const [guestName, setGuestName] = useState("");
+/* ─────────────────────────────────────────────────────
+   Animated Lamp SVG – interactive pull-cord toggle
+───────────────────────────────────────────────────── */
+function LampSVG({ isOn, onToggle, color, isDark }) {
+  const [dragging, setDragging] = useState(false);
+  const [handleDy, setHandleDy] = useState(0);
+  const startYRef = useRef(0);
+  const latestDyRef = useRef(0);
 
-    const [introCompleted, setIntroCompleted] = useState(false);
-    const [introFadeOut, setIntroFadeOut] = useState(false);
-    const [mounted, setMounted] = useState(false);
+  const THRESHOLD = 28;
+  const MAX_DY = 68;
+  const CORD_ATTACH_X = 73;
+  const CORD_ATTACH_Y = 152;
+  const HANDLE_BASE_X = 28;
+  const HANDLE_BASE_Y = 222;
 
-    useEffect(() => {
-        setMounted(true);
-    }, []);
+  const handleY = HANDLE_BASE_Y + handleDy;
 
-    const activeTheme = mounted ? resolvedTheme : "light";
+  // Theme-aware "off" colours
+  const offShade = isDark ? "#1c2333" : "#8898b0";
+  const offRim = isDark ? "#242d3e" : "#98a0b8";
+  const offPole = isDark ? "#46505e" : "#8090a0";
+  const offBase = isDark ? "#38404e" : "#909098";
+  const offCord = isDark ? "#3e4858" : "#8898a8";
 
-    useEffect(() => {
-        // Run intro for 1.8 seconds (1.5s active + 0.3s fadeout transition)
-        const timer = setTimeout(() => {
-            setIntroFadeOut(true);
-            const fadeTimer = setTimeout(() => {
-                setIntroCompleted(true);
-            }, 300);
-            return () => clearTimeout(fadeTimer);
-        }, 1800);
-        return () => clearTimeout(timer);
-    }, []);
+  /* ── Drag / click handlers ── */
+  const handleLampClick = useCallback(() => {
+    onToggle();
+  }, [onToggle]);
 
-    useEffect(() => {
-        if (!loading && user) router.replace("/");
-    }, [user, loading, router]);
+  const beginDrag = useCallback((e) => {
+    e.preventDefault();
+    startYRef.current = e.touches ? e.touches[0].clientY : e.clientY;
+    latestDyRef.current = 0;
+    setHandleDy(0);
+    setDragging(true);
+  }, []);
 
-    useEffect(() => {
-        const handleBackButton = (e) => {
-            if (showGuestForm) {
-                setShowGuestForm(false);
-            } else {
-                const isTauri = typeof window !== "undefined" && !!window.__TAURI_INTERNALS__;
-                if (isTauri) {
-                    import("@tauri-apps/api/core").then(({ invoke }) => {
-                        invoke("exit_app").catch(() => { });
-                    }).catch(() => { });
-                }
-            }
-        };
-        window.addEventListener("android-back-button", handleBackButton);
-        return () => {
-            window.removeEventListener("android-back-button", handleBackButton);
-        };
-    }, [showGuestForm]);
+  useEffect(() => {
+    if (!dragging) return;
 
-    const getFriendlyError = (code) => {
-        switch (code) {
-            case "auth/popup-blocked": return "Browser blocked the popup. Please allow popups and try again.";
-            case "auth/popup-closed-by-user": return "Sign in cancelled. Please try again.";
-            case "auth/network-request-failed": return "Please check your internet connection and try again.";
-            case "auth/too-many-requests": return "Too many requests. Please try again later.";
-            case "auth/user-disabled": return "This account has been disabled.";
-            default: return "Sign in failed. Please try again.";
-        }
+    const onMove = (e) => {
+      const cy = e.touches ? e.touches[0].clientY : e.clientY;
+      const dist = Math.max(0, Math.min(MAX_DY, cy - startYRef.current));
+      latestDyRef.current = dist;
+      setHandleDy(dist);
     };
 
-    const handleGoogle = async () => {
-        setSigningIn(true);
-        setError("");
-        try {
-            await signInWithGoogle();
-            router.replace("/");
-        } catch (e) {
-            console.error("Google sign in error:", e);
-            const msg = e?.code ? getFriendlyError(e.code) : (e?.message || String(e));
-            setError(msg);
-        } finally {
-            setSigningIn(false);
-        }
+    const onEnd = () => {
+      const d = latestDyRef.current;
+      if (d < 5 || d >= THRESHOLD) onToggle();
+      setDragging(false);
+      setHandleDy(0);
     };
 
-    const handleGuestLogin = async () => {
-        if (!guestName.trim()) return;
-        setSigningIn(true);
-        setError("");
-        try {
-            await signInAsGuest(guestName.trim());
-            router.replace("/");
-        } catch (e) {
-            console.error("Guest login error:", e);
-            const msg = e?.code ? getFriendlyError(e.code) : (e?.message || String(e));
-            setError(msg);
-        } finally {
-            setSigningIn(false);
-        }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onEnd);
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("touchend", onEnd);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onEnd);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onEnd);
     };
+  }, [dragging, isOn, onToggle]);
 
+  return (
+    <svg
+      viewBox="0 0 200 290"
+      className="w-full h-full"
+      style={{ userSelect: "none", touchAction: "none" }}
+      aria-label={
+        isOn ? "Lamp is on" : "Lamp is off – pull the cord to turn on"
+      }
+    >
+      <defs>
+        {/* Down-cone light beam */}
+        <radialGradient id="coneGrad" cx="50%" cy="0%" r="85%">
+          <stop
+            offset="0%"
+            stopColor={color}
+            stopOpacity={isOn ? "0.28" : "0"}
+          />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </radialGradient>
 
+        {/* Shade fill gradient */}
+        <linearGradient id="shadeGrad" x1="20%" y1="0%" x2="80%" y2="100%">
+          <stop offset="0%" stopColor={isOn ? color : offShade} />
+          <stop
+            offset="100%"
+            stopColor={isOn ? color + "99" : offShade + "66"}
+          />
+        </linearGradient>
 
-    const showIntro = loading || !introCompleted;
+        {/* Glow for lit shade */}
+        <filter id="shadeGlow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="5" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
 
-    if (showIntro) {
-        return (
-            <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-background bg-auth-pattern transition-all duration-300 ${introFadeOut && !loading ? 'animate-intro-container-fadeout' : ''}`}>
-                {mounted && (
-                    <button
-                        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                        className="fixed top-[calc(1.5rem+env(safe-area-inset-top,0px))] right-6 z-50 w-10 h-10 flex items-center justify-center rounded-xl bg-card border border-border/80 text-foreground hover:bg-muted/80 shadow-md active:scale-95 transition-all duration-150"
-                        aria-label="Toggle Theme"
-                    >
-                        {theme === "dark" ? <FiSun size={18} className="text-yellow-400" /> : <FiMoon size={18} className="text-slate-700" />}
-                    </button>
-                )}
+      {/* ── Light cone ── */}
+      <polygon
+        points="50,152 150,152 192,282 8,282"
+        fill="url(#coneGrad)"
+        style={{ opacity: isOn ? 1 : 0, transition: "opacity 0.9s" }}
+      />
 
-                <div className="flex flex-col items-center gap-6 z-10">
-                    <div className="w-28 h-28 rounded-full overflow-hidden border border-border/40 shadow-xl flex items-center justify-center animate-intro-logo bg-card">
-                        <img
-                            src="/lightLogo.png"
-                            alt="Lazy Notes"
-                            className="w-full h-full object-cover dark:hidden"
-                            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/lazyNoteIcon.png'; }}
-                        />
-                        <img
-                            src="/lazyNoteIcon.png"
-                            alt="Lazy Notes"
-                            className="w-full h-full object-cover hidden dark:block"
-                        />
-                    </div>
+      {/* ══ Lamp body – clickable to toggle ══ */}
+      <g
+        onClick={handleLampClick}
+        style={{ cursor: "pointer" }}
+        role="button"
+        aria-label="Click lamp to toggle light"
+      >
+        {/* Shade body */}
+        <polygon
+          points="80,52 120,52 150,152 50,152"
+          fill="url(#shadeGrad)"
+          stroke={isOn ? color : offRim}
+          strokeWidth="1.5"
+          filter={isOn ? "url(#shadeGlow)" : "none"}
+          style={{ transition: "stroke 0.6s" }}
+        />
 
-                    <div className="flex flex-col items-center gap-2">
-                        <h1 className="animate-intro-text text-3xl font-extrabold tracking-widest text-foreground">
-                            Lazy <span className="text-primary">Notes</span>
-                        </h1>
-                        <p className="animate-intro-text text-xs text-muted-foreground tracking-wide" style={{ animationDelay: '0.4s' }}>
-                            Just Note Like Lazy Person
-                        </p>
-                    </div>
+        {/* Top rim */}
+        <ellipse
+          cx="100"
+          cy="52"
+          rx="20"
+          ry="5"
+          fill={isOn ? color : offRim}
+          style={{ transition: "fill 0.6s" }}
+        />
 
-                    {/* Tech Loader Line */}
-                    <div className="w-24 h-[3px] bg-muted rounded-full overflow-hidden relative mt-2">
-                        <div className="absolute top-0 bottom-0 left-0 bg-primary animate-intro-loader rounded-full" />
-                    </div>
-                </div>
-            </div>
-        );
-    }
+        {/* Bottom rim */}
+        <ellipse
+          cx="100"
+          cy="152"
+          rx="50"
+          ry="11"
+          fill={isOn ? color : offRim}
+          style={{ transition: "fill 0.6s" }}
+        />
 
-    return (
-        <div className="relative min-h-screen w-full flex items-center justify-center bg-background bg-auth-pattern overflow-hidden px-4">
-            {mounted && (
-                <button
-                    onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                    className="fixed top-[calc(1.5rem+env(safe-area-inset-top,0px))] right-6 z-50 w-10 h-10 flex items-center justify-center rounded-xl bg-card border border-border/80 text-foreground hover:bg-muted/80 shadow-md active:scale-95 transition-all duration-150"
-                    aria-label="Toggle Theme"
-                >
-                    {theme === "dark" ? <FiSun size={18} className="text-yellow-400" /> : <FiMoon size={18} className="text-slate-700" />}
-                </button>
-            )}
+        {/* Interior / bulb glow */}
+        <ellipse
+          cx="100"
+          cy="152"
+          rx="44"
+          ry="8"
+          fill={isOn ? "#fff9e0" : isDark ? "#0b0f1c" : "#c0c8d4"}
+          opacity={isOn ? 0.8 : 1}
+          style={{ transition: "fill 0.7s, opacity 0.7s" }}
+        />
+      </g>
 
-            <div className="w-full max-w-md p-8 rounded-2xl border border-border/80 bg-card/75 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.4)] space-y-6 z-10 animate-card-enter">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="w-24 h-24 rounded-full overflow-hidden border border-border/40 shadow-md flex items-center justify-center hover:scale-105 transition-transform duration-300 bg-card">
-                        <img
-                            src="/lightLogo.png"
-                            alt="Lazy Notes"
-                            className="w-full h-full object-cover dark:hidden"
-                            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/lazyNoteIcon.png'; }}
-                        />
-                        <img
-                            src="/lazyNoteIcon.png"
-                            alt="Lazy Notes"
-                            className="w-full h-full object-cover hidden dark:block"
-                        />
-                    </div>
-                    <div className="text-center space-y-1">
-                        <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
-                            Lazy <span className="text-primary">Notes</span>
-                        </h1>
-                        <p className="text-xs text-muted-foreground">Just Note Like A Lazy Person</p>
-                    </div>
-                </div>
+      {/* ══ Face ══ */}
+      {isOn ? (
+        /* Happy / awake */
+        <g>
+          {/* Left eye */}
+          <circle cx="87" cy="97" r="5.5" fill="white" opacity="0.93" />
+          <circle cx="88.5" cy="98.5" r="2.5" fill="#181828" />
+          {/* Right eye */}
+          <circle cx="113" cy="97" r="5.5" fill="white" opacity="0.93" />
+          <circle cx="114.5" cy="98.5" r="2.5" fill="#181828" />
+          {/* Smile */}
+          <path
+            d="M 86 115 Q 100 127 114 115"
+            stroke="white"
+            strokeWidth="2.5"
+            fill="none"
+            strokeLinecap="round"
+            opacity="0.9"
+          />
+          {/* Tongue */}
+          <ellipse
+            cx="100"
+            cy="123"
+            rx="5"
+            ry="3.5"
+            fill="#ff9060"
+            opacity="0.85"
+          />
+          {/* Blush */}
+          <ellipse
+            cx="79"
+            cy="110"
+            rx="5.5"
+            ry="3"
+            fill="#ffaa88"
+            opacity="0.5"
+          />
+          <ellipse
+            cx="121"
+            cy="110"
+            rx="5.5"
+            ry="3"
+            fill="#ffaa88"
+            opacity="0.5"
+          />
+        </g>
+      ) : (
+        /* Sleeping */
+        <g>
+          {/* Closed-eye arcs */}
+          <path
+            d="M 82,94 Q 87,88 92,94"
+            stroke={isDark ? "#4e5868" : "#8890a8"}
+            strokeWidth="2.2"
+            fill="none"
+            strokeLinecap="round"
+          />
+          <path
+            d="M 108,94 Q 113,88 118,94"
+            stroke={isDark ? "#4e5868" : "#8890a8"}
+            strokeWidth="2.2"
+            fill="none"
+            strokeLinecap="round"
+          />
+          {/* Neutral mouth */}
+          <path
+            d="M 90,111 Q 100,115 110,111"
+            stroke={isDark ? "#3a4455" : "#6878a0"}
+            strokeWidth="1.8"
+            fill="none"
+            strokeLinecap="round"
+          />
+          {/* Floating ZZZs */}
+          <text
+            x="121"
+            y="83"
+            fontSize="9"
+            fill={isDark ? "#3c4860" : "#6878a8"}
+            fontFamily="sans-serif"
+            fontWeight="600"
+          >
+            z
+          </text>
+          <text
+            x="129"
+            y="75"
+            fontSize="7"
+            fill={isDark ? "#2e3a50" : "#5868a0"}
+            fontFamily="sans-serif"
+            fontWeight="600"
+          >
+            z
+          </text>
+          <text
+            x="135"
+            y="68"
+            fontSize="5"
+            fill={isDark ? "#242e3e" : "#485888"}
+            fontFamily="sans-serif"
+            fontWeight="600"
+          >
+            z
+          </text>
+        </g>
+      )}
 
-                {error && (
-                    <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive text-center font-medium animate-pulse">
-                        {error}
-                    </div>
-                )}
+      {/* ══ Pole ══ */}
+      <rect
+        x="97"
+        y="152"
+        width="6"
+        height="76"
+        rx="3"
+        fill={isOn ? "#d4d8e2" : offPole}
+        style={{ transition: "fill 0.6s" }}
+      />
 
+      {/* ══ Base ══ */}
+      <ellipse
+        cx="100"
+        cy="232"
+        rx="26"
+        ry="7"
+        fill={isOn ? "#bcc0cc" : offBase}
+        style={{ transition: "fill 0.6s" }}
+      />
+      <ellipse
+        cx="100"
+        cy="228"
+        rx="19"
+        ry="5"
+        fill={isOn ? "#ccd0dc" : isDark ? "#323844" : "#9898a4"}
+        style={{ transition: "fill 0.6s" }}
+      />
 
+      {/* ══ Pull cord ══ */}
+      <line
+        x1={CORD_ATTACH_X}
+        y1={CORD_ATTACH_Y}
+        x2={HANDLE_BASE_X}
+        y2={handleY}
+        stroke={isOn ? "#aab0c0" : offCord}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        style={{ transition: dragging ? "none" : "stroke 0.6s" }}
+      />
 
-                <div className="space-y-3">
-                    <div className="flex justify-center">
-                        <button
-                            type="button"
-                            onClick={() => setShowGuestForm((s) => !s)}
-                            aria-expanded={showGuestForm}
-                            className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 hover:bg-primary/15 active:scale-95"
-                        >
-                            <span className="relative flex h-1.5 w-1.5">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary"></span>
-                            </span>
-                            {showGuestForm ? "Go Back to Sign In" : "Continue as Guest"}
-                        </button>
-                    </div>
+      {/* Invisible larger touch target */}
+      <circle
+        cx={HANDLE_BASE_X}
+        cy={handleY}
+        r="22"
+        fill="transparent"
+        style={{ cursor: dragging ? "grabbing" : "grab", touchAction: "none" }}
+        onMouseDown={beginDrag}
+        onTouchStart={beginDrag}
+      />
 
-                    {showGuestForm && (
-                        <div className="space-y-3 p-4 rounded-xl bg-muted/40 border border-border/50 animate-card-enter">
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Your Name</label>
-                                <Input
-                                    value={guestName}
-                                    onChange={(e) => setGuestName(e.target.value)}
-                                    placeholder="Enter your name"
-                                    className="h-10 rounded-lg bg-background border-border text-foreground"
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter") handleGuestLogin();
-                                    }}
-                                />
-                            </div>
+      {/* Visible cord bead */}
+      <circle
+        cx={HANDLE_BASE_X}
+        cy={handleY}
+        r="8"
+        fill={isOn ? "#c4cad8" : isDark ? "#3e4858" : "#8098a8"}
+        stroke={isOn ? "#9aa0b0" : offCord}
+        strokeWidth="1.5"
+        style={{
+          pointerEvents: "none",
+          filter: dragging ? `drop-shadow(0 4px 10px ${color}60)` : "none",
+          transition: dragging ? "none" : "fill 0.6s, stroke 0.6s",
+        }}
+      />
 
-                            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-600 dark:text-amber-400 font-medium leading-relaxed">
-                                ⚠️ <strong>Note:</strong> Your data will not be saved in the cloud; it will only remain on your device.
-                            </div>
-
-                            <Button
-                                onClick={handleGuestLogin}
-                                disabled={signingIn || !guestName.trim()}
-                                className="w-full h-10 mt-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg shadow-sm disabled:opacity-50"
-                            >
-                                {signingIn ? "Entering..." : "Start as Guest"}
-                            </Button>
-                        </div>
-                    )}
-                </div>
-
-                {!showGuestForm && (
-                    <div className="relative py-2">
-                        <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t border-border/60" />
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-card px-3 text-muted-foreground font-semibold tracking-wider text-[10px]">Or</span>
-                        </div>
-                    </div>
-                )}
-
-                {!showGuestForm && (
-                    <Button
-                        onClick={handleGoogle}
-                        disabled={signingIn}
-                        className="w-full h-12 gap-3 text-sm font-semibold rounded-xl bg-background border border-border hover:bg-muted/80 shadow-sm active:scale-[0.98] transition-all duration-150 text-foreground"
-                        variant="outline"
-                    >
-                        <FcGoogle size={20} />
-                        {signingIn ? "Signing in..." : "Continue with Google"}
-                    </Button>
-                )}
-
-                <div className="flex justify-between items-center pt-2 border-t border-border/40 text-xs">
-                    <button
-                        type="button"
-                        onClick={() => signInWithGoogleSelectAccount()}
-                        className="text-primary hover:underline font-medium transition-all"
-                    >
-                        Use different account
-                    </button>
-                   
-                </div>
-
-                <div className="text-center pt-2 text-[10px] text-muted-foreground/60 border-t border-border/20">
-                    By using Lazy Notes, you agree to our{" "}
-                    <Link href="/privacy" className="text-primary hover:underline font-semibold transition-all">
-                        Privacy Policy
-                    </Link>
-                </div>
-            </div>
-        </div>
-    );
+      {/* Pull-down arrow hint when lamp is off */}
+      {!isOn && !dragging && (
+        <g style={{ opacity: 0.42 }}>
+          <line
+            x1={HANDLE_BASE_X}
+            y1={handleY + 13}
+            x2={HANDLE_BASE_X}
+            y2={handleY + 22}
+            stroke={isDark ? "#4e5870" : "#808898"}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+          <polyline
+            points={`${HANDLE_BASE_X - 4},${handleY + 19} ${HANDLE_BASE_X},${handleY + 24} ${HANDLE_BASE_X + 4},${handleY + 19}`}
+            stroke={isDark ? "#4e5870" : "#808898"}
+            strokeWidth="1.5"
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </g>
+      )}
+    </svg>
+  );
 }
 
+/* ─────────────────────────────────────────────────────
+   Main Auth Page
+───────────────────────────────────────────────────── */
+export default function AuthPage() {
+  const {
+    user,
+    signInWithGoogle,
+    signInWithGoogleSelectAccount,
+    signInAsGuest,
+    loading,
+  } = useAuth();
+
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const router = useRouter();
+
+  const [signingIn, setSigningIn] = useState(false);
+  const [error, setError] = useState("");
+  const [showGuestForm, setShowGuestForm] = useState(false);
+  const [guestName, setGuestName] = useState("");
+  const [lampOn, setLampOn] = useState(false);
+  const [introCompleted, setIntroCompleted] = useState(false);
+  const [introFadeOut, setIntroFadeOut] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const activeTheme = mounted ? resolvedTheme : "dark";
+  const isDark = activeTheme === "dark";
+  const primaryColor = isDark ? "#4cc9d0" : "#bb5e3a";
+
+  /* ── Intro timing ── */
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setIntroFadeOut(true);
+      const ft = setTimeout(() => setIntroCompleted(true), 300);
+      return () => clearTimeout(ft);
+    }, 1800);
+    return () => clearTimeout(t);
+  }, []);
+
+  /* ── Redirect when authenticated ── */
+  useEffect(() => {
+    if (!loading && user) router.replace("/");
+  }, [user, loading, router]);
+
+  /* ── Android back button ── */
+  useEffect(() => {
+    const handler = () => {
+      if (showGuestForm) {
+        setShowGuestForm(false);
+      } else {
+        const isTauri =
+          typeof window !== "undefined" && !!window.__TAURI_INTERNALS__;
+        if (isTauri) {
+          import("@tauri-apps/api/core")
+            .then(({ invoke }) => invoke("exit_app").catch(() => {}))
+            .catch(() => {});
+        }
+      }
+    };
+    window.addEventListener("android-back-button", handler);
+    return () => window.removeEventListener("android-back-button", handler);
+  }, [showGuestForm]);
+
+  const getFriendlyError = (code) =>
+    ({
+      "auth/popup-blocked":
+        "Browser blocked the popup. Please allow popups and try again.",
+      "auth/popup-closed-by-user": "Sign in cancelled. Please try again.",
+      "auth/network-request-failed":
+        "Please check your internet connection and try again.",
+      "auth/too-many-requests": "Too many requests. Please try again later.",
+      "auth/user-disabled": "This account has been disabled.",
+    })[code] ?? "Sign in failed. Please try again.";
+
+  const handleGoogle = async () => {
+    setSigningIn(true);
+    setError("");
+    try {
+      await signInWithGoogle();
+      router.replace("/");
+    } catch (e) {
+      setError(e?.code ? getFriendlyError(e.code) : e?.message || String(e));
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    if (!guestName.trim()) return;
+    setSigningIn(true);
+    setError("");
+    try {
+      await signInAsGuest(guestName.trim());
+      router.replace("/");
+    } catch (e) {
+      setError(e?.code ? getFriendlyError(e.code) : e?.message || String(e));
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
+  const handleToggleLamp = useCallback(() => setLampOn((p) => !p), []);
+
+  /* ════════════════════════════════
+     INTRO SCREEN
+  ════════════════════════════════ */
+  if (loading || !introCompleted) {
+    return (
+      <div
+        className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-background bg-auth-pattern transition-all duration-300 ${
+          introFadeOut && !loading ? "animate-intro-container-fadeout" : ""
+        }`}
+      >
+        {mounted && (
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="fixed top-[calc(1.5rem+env(safe-area-inset-top,0px))] right-6 z-50 w-10 h-10 flex items-center justify-center rounded-xl bg-card border border-border/80 text-foreground hover:bg-muted/80 shadow-md active:scale-95 transition-all duration-150"
+            aria-label="Toggle Theme"
+          >
+            {theme === "dark" ? (
+              <FiSun size={18} className="text-yellow-400" />
+            ) : (
+              <FiMoon size={18} className="text-slate-700" />
+            )}
+          </button>
+        )}
+
+        <div className="flex flex-col items-center gap-6 z-10">
+          <div className="w-28 h-28 rounded-full overflow-hidden border border-border/40 shadow-xl flex items-center justify-center animate-intro-logo bg-card">
+            <img
+              src="/lightLogo.png"
+              alt="Lazy Notes"
+              className="w-full h-full object-cover dark:hidden"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = "/lazyNoteIcon.png";
+              }}
+            />
+            <img
+              src="/lazyNoteIcon.png"
+              alt="Lazy Notes"
+              className="w-full h-full object-cover hidden dark:block"
+            />
+          </div>
+
+          <div className="flex flex-col items-center gap-2">
+            <h1 className="animate-intro-text text-3xl font-extrabold tracking-widest text-foreground">
+              Lazy <span className="text-primary">Notes</span>
+            </h1>
+            <p
+              className="animate-intro-text text-xs text-muted-foreground tracking-wide"
+              style={{ animationDelay: "0.4s" }}
+            >
+              Just Note Like Lazy Person
+            </p>
+          </div>
+
+          <div className="w-24 h-[3px] bg-muted rounded-full overflow-hidden relative mt-2">
+            <div className="absolute inset-y-0 left-0 bg-primary animate-intro-loader rounded-full" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ════════════════════════════════
+     MAIN LOGIN PAGE
+  ════════════════════════════════ */
+  return (
+    <div className="relative min-h-screen w-full flex items-center justify-center bg-background overflow-hidden">
+      {/* Ambient background glow when lamp is on */}
+      <div
+        className="fixed inset-0 pointer-events-none transition-opacity duration-1000"
+        style={{
+          opacity: lampOn ? 1 : 0,
+          background: mounted
+            ? `radial-gradient(ellipse 55% 70% at 22% 52%, ${primaryColor}18 0%, transparent 70%)`
+            : "none",
+        }}
+      />
+
+      {/* Theme toggle */}
+      {mounted && (
+        <button
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          className="fixed top-[calc(1.5rem+env(safe-area-inset-top,0px))] right-6 z-50 w-10 h-10 flex items-center justify-center rounded-xl bg-card border border-border/80 text-foreground hover:bg-muted/80 shadow-md active:scale-95 transition-all duration-150"
+          aria-label="Toggle Theme"
+        >
+          {theme === "dark" ? (
+            <FiSun size={18} className="text-yellow-400" />
+          ) : (
+            <FiMoon size={18} className="text-slate-700" />
+          )}
+        </button>
+      )}
+
+      {/* ── Content ── */}
+      <div className="relative z-10 w-full max-w-5xl mx-auto px-5 flex flex-col md:flex-row items-center justify-center h-[100dvh] md:h-auto md:min-h-0 md:py-16 overflow-hidden md:overflow-visible">
+        {/* ══ Lamp section ══ */}
+        <div className="flex flex-col items-center gap-2 shrink-0 h-[min(210px,42dvh)] md:h-auto justify-end pb-1 md:pb-0">
+          <div className="flex-1 w-[165px] md:w-[280px] md:h-[360px] md:flex-none">
+            {mounted && (
+              <LampSVG
+                isOn={lampOn}
+                onToggle={handleToggleLamp}
+                color={primaryColor}
+                isDark={isDark}
+              />
+            )}
+          </div>
+          {!lampOn && (
+            <p className="text-xs font-medium select-none text-center text-muted-foreground opacity-70">
+              Tap the lamp or pull the cord
+            </p>
+          )}
+        </div>
+
+        {/* Desktop-only gap spacer that grows when form appears */}
+        <div
+          className="hidden md:block shrink-0"
+          style={{
+            width: lampOn ? "3.5rem" : "0",
+            transition: "width 0.7s cubic-bezier(0.16,1,0.3,1)",
+          }}
+        />
+
+        {/* ══ Form section — collapses to 0 when lamp is off ══ */}
+        <div
+          className="flex-1 min-h-0 md:flex-none shrink-0 overflow-hidden w-full md:w-auto"
+          style={{
+            maxWidth: lampOn ? "min(32rem, 100%)" : "0",
+            maxHeight: lampOn ? "900px" : "0",
+            opacity: lampOn ? 1 : 0,
+            pointerEvents: lampOn ? "auto" : "none",
+            transition:
+              "max-width 0.7s cubic-bezier(0.16,1,0.3,1), max-height 0.7s cubic-bezier(0.16,1,0.3,1), opacity 0.55s ease",
+          }}
+        >
+          {/* Inner: fills height on mobile for internal scroll, auto on desktop */}
+          <div className="h-full md:h-auto overflow-y-auto md:overflow-visible pt-3 md:pt-0 pb-3 md:pb-0">
+            {/* ── Card ── */}
+            <div
+              className="rounded-3xl border bg-card backdrop-blur-2xl overflow-hidden"
+              style={{
+                borderColor: mounted ? `${primaryColor}42` : "var(--border)",
+                boxShadow: mounted
+                  ? `0 0 0 1px ${primaryColor}28, 0 12px 60px ${primaryColor}16, 0 24px 70px rgba(0,0,0,0.22)`
+                  : "none",
+                transition: "border-color 0.7s, box-shadow 0.7s",
+              }}
+            >
+              {/* Top accent line */}
+              <div
+                style={{
+                  height: "2px",
+                  background: mounted
+                    ? `linear-gradient(90deg, transparent 0%, ${primaryColor}88 40%, ${primaryColor}88 60%, transparent 100%)`
+                    : "transparent",
+                  transition: "opacity 0.7s",
+                  opacity: lampOn ? 1 : 0,
+                }}
+              />
+
+              <div className="p-6 sm:p-8 space-y-5">
+                {/* Header: logo + title */}
+                <div className="flex flex-col items-center gap-3 pb-1">
+                  <div className="w-16 h-16 rounded-full overflow-hidden border border-border/40 shadow-lg bg-card shrink-0">
+                    <img
+                      src="/lightLogo.png"
+                      alt="Lazy Notes"
+                      className="w-full h-full object-cover dark:hidden"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = "/lazyNoteIcon.png";
+                      }}
+                    />
+                    <img
+                      src="/lazyNoteIcon.png"
+                      alt="Lazy Notes"
+                      className="w-full h-full object-cover hidden dark:block"
+                    />
+                  </div>
+                  <div className="text-center">
+                    <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
+                      Lazy{" "}
+                      <span
+                        style={{
+                          color: mounted ? primaryColor : "var(--primary)",
+                        }}
+                      >
+                        Notes
+                      </span>
+                    </h1>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Just Note Like A Lazy Person
+                    </p>
+                  </div>
+                </div>
+
+                {/* Error */}
+                {error && (
+                  <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-sm text-destructive text-center font-medium">
+                    {error}
+                  </div>
+                )}
+
+                {/* Continue as Guest — full-width button */}
+                <button
+                  type="button"
+                  onClick={() => setShowGuestForm((s) => !s)}
+                  aria-expanded={showGuestForm}
+                  className="w-full flex items-center justify-center gap-2 h-11 px-4 rounded-xl text-sm font-semibold border transition-all active:scale-[0.98] hover:opacity-90"
+                  style={{
+                    background: mounted ? `${primaryColor}14` : "transparent",
+                    borderColor: mounted
+                      ? `${primaryColor}38`
+                      : "var(--border)",
+                    color: mounted ? primaryColor : "var(--primary)",
+                  }}
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span
+                      className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-70"
+                      style={{
+                        background: mounted ? primaryColor : "var(--primary)",
+                      }}
+                    />
+                    <span
+                      className="relative inline-flex rounded-full h-2 w-2"
+                      style={{
+                        background: mounted ? primaryColor : "var(--primary)",
+                      }}
+                    />
+                  </span>
+                  {showGuestForm ? "← Back to Sign In" : "Continue as Guest"}
+                </button>
+
+                {/* Guest form */}
+                {showGuestForm && (
+                  <div className="space-y-3 animate-card-enter">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                        Your Name
+                      </label>
+                      <Input
+                        value={guestName}
+                        onChange={(e) => setGuestName(e.target.value)}
+                        placeholder="Enter your name"
+                        className="h-11 rounded-xl bg-background/80 border-border/70 text-foreground"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleGuestLogin();
+                        }}
+                      />
+                    </div>
+                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-600 dark:text-amber-400 font-medium leading-relaxed">
+                      ⚠️ <strong>Local only</strong> — data won't be backed up
+                      to the cloud.
+                    </div>
+                    <Button
+                      onClick={handleGuestLogin}
+                      disabled={signingIn || !guestName.trim()}
+                      className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl disabled:opacity-50"
+                    >
+                      {signingIn ? "Entering…" : "Start as Guest"}
+                    </Button>
+                  </div>
+                )}
+
+                {/* OR divider */}
+                {!showGuestForm && (
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-px bg-border/50" />
+                    <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
+                      or
+                    </span>
+                    <div className="flex-1 h-px bg-border/50" />
+                  </div>
+                )}
+
+                {/* Google sign-in */}
+                {!showGuestForm && (
+                  <Button
+                    onClick={handleGoogle}
+                    disabled={signingIn}
+                    className="w-full h-12 gap-3 text-sm font-semibold rounded-xl bg-background/60 hover:bg-muted/70 border border-border/70 shadow-sm active:scale-[0.98] transition-all text-foreground"
+                    variant="outline"
+                  >
+                    <FcGoogle size={20} />
+                    {signingIn ? "Signing in…" : "Continue with Google"}
+                  </Button>
+                )}
+
+                {/* Footer */}
+                <div className="pt-3 border-t border-border/30 flex flex-col gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => signInWithGoogleSelectAccount()}
+                    className="text-[11px] font-semibold text-left transition-all"
+                    style={{ color: mounted ? primaryColor : "var(--primary)" }}
+                  >
+                    Use a different Google account
+                  </button>
+                  <p className="text-[10px] text-muted-foreground/50 leading-relaxed">
+                    By continuing, you agree to our{" "}
+                    <Link
+                      href="/privacy"
+                      className="font-semibold hover:underline"
+                      style={{
+                        color: mounted ? primaryColor : "var(--primary)",
+                      }}
+                    >
+                      Privacy Policy
+                    </Link>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
