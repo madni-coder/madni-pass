@@ -163,7 +163,15 @@ function buildHighlightHtml(text, query, matches, activeIdx) {
     return result;
 }
 
-export default function NoteViewer({ note, folderId, onSave, onClose, userId, userEmail, onDelete, onRestore, globalPinHash, setGlobalPinHash }) {
+function getNextUntitledTitle(notes) {
+    return "Untitled";
+}
+
+function getNowSeconds() {
+    return Math.floor(Date.now() / 1000);
+}
+
+export default function NoteViewer({ note, notes = [], folderId, onSave, onClose, userId, userEmail, onDelete, onRestore, globalPinHash, setGlobalPinHash }) {
     const isNew = !note?.id;
     const [title, setTitle] = useState(note?.title || "");
     const [content, setContent] = useState(note?.content || "");
@@ -174,6 +182,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
     const [noteIsPinned, setNoteIsPinned] = useState(note?.isPinned || false);
 
     const prevNoteIdRef = useRef(note?.id || null);
+    const createdAtRef = useRef(note?.createdAt || { seconds: getNowSeconds() });
 
     useEffect(() => {
         if (note?.id !== prevNoteIdRef.current) {
@@ -182,6 +191,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
             setIsUnlocked(!note?.pinHash);
             setNoteIsPinned(note?.isPinned || false);
             setDeleteConfirmIdx(null);
+            createdAtRef.current = note?.createdAt || { seconds: getNowSeconds() };
         } else {
             setNotePinHash(note?.pinHash || null);
             setNoteIsPinned(note?.isPinned || false);
@@ -326,32 +336,43 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
 
     useEffect(() => { imagesRef.current = images; }, [images]);
 
-    // Save note on unmount if it is dirty (e.g. user closes/transitions away immediately)
+    // Save note on unmount if it is dirty or needs default title
     useEffect(() => {
         return () => {
-            const finalTitle = titleRefVal.current;
             const finalContent = contentRefVal.current;
-            if (note?.inBin || !finalTitle.trim() || !isDirtyRef.current) return;
+            const hasImages = imagesRef.current.length > 0;
+            if (note?.inBin) return;
+
+            let finalTitle = titleRefVal.current.trim();
+            let mustSave = isDirtyRef.current;
+
+            // If the title is empty, but we have images or content, we should set it to "Untitled X"
+            if (!finalTitle && (hasImages || finalContent.trim())) {
+                finalTitle = getNextUntitledTitle(notes);
+                mustSave = true;
+            }
+
+            if (!finalTitle || !mustSave) return;
 
             const master = userId;
-            const encTitle = encrypt(finalTitle.trim(), master);
+            const encTitle = encrypt(finalTitle, master);
             const encContent = encrypt(finalContent, master);
 
             if (!noteCreatedVal.current) {
                 // Instantly update parent UI and local cache
-                onSave({ id: noteIdRef.current, title: finalTitle.trim(), content: finalContent, images: imagesRef.current, pinHash: notePinHash, isPinned: noteIsPinnedVal.current });
+                onSave({ id: noteIdRef.current, title: finalTitle, content: finalContent, images: imagesRef.current, pinHash: notePinHash, isPinned: noteIsPinnedVal.current, createdAt: createdAtRef.current, updatedAt: { seconds: getNowSeconds() } });
                 // Asynchronously save to cloud
-                createNote(userId, folderIdVal.current ?? null, encTitle, encContent, noteIdRef.current)
+                createNote(userId, folderIdVal.current ?? null, encTitle, encContent, noteIdRef.current, imagesRef.current)
                     .catch(err => console.error("Cloud save on unmount failed:", err));
             } else {
                 // Instantly update parent UI and local cache
-                onSave({ id: noteIdRef.current, title: finalTitle.trim(), content: finalContent, images: imagesRef.current, pinHash: notePinHash, isPinned: noteIsPinnedVal.current });
+                onSave({ id: noteIdRef.current, title: finalTitle, content: finalContent, images: imagesRef.current, pinHash: notePinHash, isPinned: noteIsPinnedVal.current, createdAt: createdAtRef.current, updatedAt: { seconds: getNowSeconds() } });
                 // Asynchronously save to cloud
                 updateNote(noteIdRef.current, encTitle, encContent, imagesRef.current)
                     .catch(err => console.error("Cloud save on unmount failed:", err));
             }
         };
-    }, [onSave, userId, note?.inBin, notePinHash]);
+    }, [onSave, userId, note?.inBin, notePinHash, notes]);
 
     useEffect(() => {
         const el = titleRef.current;
@@ -361,12 +382,73 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
         }
     }, [title]);
 
+    const handleClose = useCallback(() => {
+        clearTimeout(saveTimerRef.current);
+
+        const finalContent = contentRefVal.current;
+        const hasImages = imagesRef.current.length > 0;
+
+        if (note?.inBin) {
+            onClose();
+            return;
+        }
+
+        let finalTitle = titleRefVal.current.trim();
+        let mustSave = isDirtyRef.current;
+
+        // If the title is empty, but we have images or content, we should set it to "Untitled X"
+        if (!finalTitle && (hasImages || finalContent.trim())) {
+            finalTitle = getNextUntitledTitle(notes);
+            mustSave = true;
+        }
+
+        if (mustSave && finalTitle) {
+            const master = userId;
+            const encTitle = encrypt(finalTitle, master);
+            const encContent = encrypt(finalContent, master);
+
+            // Instantly update parent UI and local cache
+            onSave({
+                id: noteIdRef.current,
+                title: finalTitle,
+                content: finalContent,
+                images: imagesRef.current,
+                pinHash: notePinHash,
+                isPinned: noteIsPinnedVal.current,
+                createdAt: createdAtRef.current,
+                updatedAt: { seconds: getNowSeconds() }
+            });
+            isDirtyRef.current = false;
+
+            // Asynchronously save to cloud
+            if (!noteCreatedVal.current) {
+                createNote(userId, folderIdVal.current ?? null, encTitle, encContent, noteIdRef.current, imagesRef.current)
+                    .catch(err => console.error("Cloud save on close failed:", err));
+            } else {
+                updateNote(noteIdRef.current, encTitle, encContent, imagesRef.current)
+                    .catch(err => console.error("Cloud save on close failed:", err));
+            }
+        }
+
+        onClose();
+    }, [onClose, onSave, userId, note?.inBin, notePinHash, notes]);
+
+    // Intercept Android back gesture
+    useEffect(() => {
+        const handleBack = (e) => {
+            e.stopImmediatePropagation();
+            handleClose();
+        };
+        window.addEventListener("android-back-button", handleBack);
+        return () => window.removeEventListener("android-back-button", handleBack);
+    }, [handleClose]);
+
     // Close on Esc key
     useEffect(() => {
-        const handler = (e) => { if (e.key === "Escape") onClose(); };
+        const handler = (e) => { if (e.key === "Escape") handleClose(); };
         document.addEventListener("keydown", handler);
         return () => document.removeEventListener("keydown", handler);
-    }, [onClose]);
+    }, [handleClose]);
 
     const matches = findMatches(content, inSearch);
     const detectedCreds = useMemo(() => parseCredentials(content), [content]);
@@ -404,38 +486,56 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
     // Auto-save: debounce 800ms on title/content change
     useEffect(() => {
         if (note?.inBin) return;
-        if (!title.trim()) return;
+        
+        // If the note doesn't exist yet, we only auto-save if we have a title.
+        // If the note has already been created, we can save even if title is empty.
+        if (!noteCreated && !title.trim()) return;
+
         clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = setTimeout(async () => {
-            try {
-                // Create note if it doesn't exist yet
-                if (!noteCreated) {
-                    if (creatingRef.current) return;
-                    creatingRef.current = true;
-                    try {
-                        const master = userId;
-                        const encTitle = encrypt(title.trim(), master);
-                        const encContent = encrypt(content, master);
-                        const id = await createNote(userId, folderId ?? null, encTitle, encContent, noteIdRef.current);
-                        noteIdRef.current = id;
+        saveTimerRef.current = setTimeout(() => {
+            const currentTitle = title.trim();
+            const currentContent = content;
+            const currentImages = imagesRef.current;
+            const master = userId;
+            const encTitle = encrypt(currentTitle, master);
+            const encContent = encrypt(currentContent, master);
+
+            // Instantly update parent UI and local cache
+            onSave({
+                id: noteIdRef.current,
+                title: currentTitle,
+                content: currentContent,
+                images: currentImages,
+                pinHash: notePinHash,
+                isPinned: noteIsPinnedVal.current,
+                createdAt: createdAtRef.current,
+                updatedAt: { seconds: getNowSeconds() }
+            });
+            isDirtyRef.current = false;
+            setSaveStatus("saved");
+            setTimeout(() => setSaveStatus("idle"), 2000);
+
+            // Asynchronously sync with cloud in the background
+            if (!noteCreated) {
+                if (creatingRef.current) return;
+                creatingRef.current = true;
+                createNote(userId, folderId ?? null, encTitle, encContent, noteIdRef.current, currentImages)
+                    .then(() => {
                         setNoteCreated(true);
-                        onSave({ id, title: title.trim(), content, images: [], pinHash: notePinHash, isPinned: noteIsPinnedVal.current });
-                    } finally {
+                    })
+                    .catch((err) => {
+                        console.error("Cloud auto-save creation failed:", err);
+                        isDirtyRef.current = true;
+                    })
+                    .finally(() => {
                         creatingRef.current = false;
-                    }
-                } else {
-                    const master = userId;
-                    const encTitle = encrypt(title.trim(), master);
-                    const encContent = encrypt(content, master);
-                    await updateNote(noteIdRef.current, encTitle, encContent, imagesRef.current);
-                    onSave({ id: noteIdRef.current, title: title.trim(), content, images: imagesRef.current, pinHash: notePinHash, isPinned: noteIsPinnedVal.current });
-                }
-                isDirtyRef.current = false;
-                setSaveStatus("saved");
-                setTimeout(() => setSaveStatus("idle"), 2000);
-            } catch (err) {
-                notify("Failed to save: " + err.message, "error");
-                setSaveStatus("idle");
+                    });
+            } else {
+                updateNote(noteIdRef.current, encTitle, encContent, currentImages)
+                    .catch((err) => {
+                        console.error("Cloud auto-save update failed:", err);
+                        isDirtyRef.current = true;
+                    });
             }
         }, 800);
         return () => clearTimeout(saveTimerRef.current);
@@ -448,35 +548,10 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
         if (file.size > 10 * 1024 * 1024) { notify("Image size must be smaller than 10MB", "error"); return; }
         if (images.length >= 4) { notify("You can upload a maximum of 4 images per note", "error"); return; }
         
-        if (!noteCreated) {
-            if (!title.trim()) {
-                notify("Please add a title before attaching an image", "error");
-                e.target.value = "";
-                return;
-            }
-            setUploading(true);
-            try {
-                const master = userId;
-                const encTitle = encrypt(title.trim(), master);
-                const encContent = encrypt(content, master);
-                const id = await createNote(userId, folderId ?? null, encTitle, encContent, noteIdRef.current);
-                noteIdRef.current = id;
-                setNoteCreated(true);
-                
-                const imgData = await storeImage(file, master);
-                const newImgs = [imgData];
-                setImages(newImgs);
-                await updateNote(id, encTitle, encContent, newImgs);
-                onSave({ id, title: title.trim(), content, images: newImgs, pinHash: notePinHash, isPinned: noteIsPinned });
-                isDirtyRef.current = false;
-                notify("Image attached!");
-            } catch (err) {
-                notify("Failed to upload image: " + (err?.message || err), "error");
-            } finally {
-                setUploading(false);
-                e.target.value = "";
-            }
-            return;
+        let activeTitle = title.trim();
+        if (!activeTitle) {
+            activeTitle = getNextUntitledTitle(notes);
+            setTitle(activeTitle);
         }
 
         setUploading(true);
@@ -485,14 +560,45 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
             const imgData = await storeImage(file, master);
             const newImgs = [...imagesRef.current, imgData];
             setImages(newImgs);
-            const encTitle = encrypt(title, master);
-            const encContent = encrypt(content, master);
-            await updateNote(noteIdRef.current, encTitle, encContent, newImgs);
-            onSave({ id: noteIdRef.current, title, content, images: newImgs, pinHash: notePinHash, isPinned: noteIsPinned });
+
+            // Instantly update parent UI and local cache
+            onSave({
+                id: noteIdRef.current,
+                title: activeTitle,
+                content,
+                images: newImgs,
+                pinHash: notePinHash,
+                isPinned: noteIsPinned,
+                createdAt: createdAtRef.current,
+                updatedAt: { seconds: getNowSeconds() }
+            });
             isDirtyRef.current = false;
             notify("Image attached!");
-        } catch (err) { notify("Failed to upload image: " + (err?.message || err), "error"); }
-        finally { setUploading(false); e.target.value = ""; }
+
+            // Asynchronously sync with cloud in the background
+            const encTitle = encrypt(activeTitle, master);
+            const encContent = encrypt(content, master);
+
+            if (!noteCreated) {
+                setNoteCreated(true);
+                createNote(userId, folderId ?? null, encTitle, encContent, noteIdRef.current, newImgs)
+                    .catch(err => {
+                        console.error("Cloud save for new note with image failed:", err);
+                        isDirtyRef.current = true;
+                    });
+            } else {
+                updateNote(noteIdRef.current, encTitle, encContent, newImgs)
+                    .catch(err => {
+                        console.error("Cloud save for note update with image failed:", err);
+                        isDirtyRef.current = true;
+                    });
+            }
+        } catch (err) {
+            notify("Failed to upload image: " + (err?.message || err), "error");
+        } finally {
+            setUploading(false);
+            e.target.value = "";
+        }
     };
 
     const displayImages = useMemo(() => {
@@ -510,15 +616,32 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
     const handleDeleteImage = async (img, idx) => {
         const newImgs = images.filter((_, i) => i !== idx);
         setImages(newImgs);
+
+        // Instantly update parent UI and local cache
+        onSave({
+            id: noteIdRef.current,
+            title,
+            content,
+            images: newImgs,
+            pinHash: notePinHash,
+            isPinned: noteIsPinned,
+            createdAt: createdAtRef.current,
+            updatedAt: { seconds: getNowSeconds() }
+        });
+        isDirtyRef.current = false;
+        notify("Image removed");
+
+        // Asynchronously sync with cloud
         if (noteCreated) {
             const master = userId;
             const encTitle = encrypt(title, master);
             const encContent = encrypt(content, master);
-            await updateNote(noteIdRef.current, encTitle, encContent, newImgs);
-            onSave({ id: noteIdRef.current, title, content, images: newImgs, pinHash: notePinHash });
-            isDirtyRef.current = false;
+            updateNote(noteIdRef.current, encTitle, encContent, newImgs)
+                .catch(err => {
+                    console.error("Cloud delete image failed:", err);
+                    isDirtyRef.current = true;
+                });
         }
-        notify("Image removed");
     };
 
     const sharedTextStyle = {
@@ -584,7 +707,10 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                     title,
                     content,
                     images,
-                    pinHash: true
+                    pinHash: true,
+                    isPinned: noteIsPinned,
+                    createdAt: createdAtRef.current,
+                    updatedAt: { seconds: getNowSeconds() }
                 });
                 notify("Note locked using your global PIN!");
             } catch (err) {
@@ -607,7 +733,9 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                 content,
                 images,
                 pinHash: notePinHash,
-                isPinned: newPinnedState
+                isPinned: newPinnedState,
+                createdAt: createdAtRef.current,
+                updatedAt: { seconds: getNowSeconds() }
             });
             notify(newPinnedState ? "Note pinned to top!" : "Note unpinned!");
         } catch (err) {
@@ -648,6 +776,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
             background: "var(--card)",
             border: "1px solid var(--border)",
             color: "var(--foreground)",
+            paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))",
         };
 
     if (!isUnlocked && notePinHash) {
@@ -695,7 +824,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
             `}</style>
             {/* Backdrop overlay */}
             <div
-                onClick={onClose}
+                onClick={handleClose}
                 className="animate-backdrop-fade"
                 style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)" }}
             />
@@ -704,7 +833,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                 {/* Title area — accented */}
                 <div className="flex items-start gap-3 px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] sm:pt-4 pb-3 border-b-2 border-primary/60 bg-card/70">
                     <button
-                        onClick={onClose}
+                        onClick={handleClose}
                         className="flex sm:hidden w-8 h-8 items-center justify-center rounded-lg bg-muted text-foreground hover:bg-muted/80 transition-colors mr-1 shrink-0"
                         aria-label="Back"
                     >
@@ -824,7 +953,7 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                         </div>
                         {/* Close button inside flex — no overlap */}
                         <button
-                            onClick={onClose}
+                            onClick={handleClose}
                             className="hidden sm:flex w-8 h-8 items-center justify-center rounded-lg bg-muted text-foreground hover:bg-destructive/20 hover:text-destructive transition-colors"
                         >
                             <FiX size={18} />
@@ -1188,7 +1317,10 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                                     title,
                                     content,
                                     images,
-                                    pinHash: true
+                                    pinHash: true,
+                                    isPinned: noteIsPinned,
+                                    createdAt: createdAtRef.current,
+                                    updatedAt: { seconds: getNowSeconds() }
                                 });
                                 notify("Global PIN set and note locked!");
                             }
@@ -1219,7 +1351,10 @@ export default function NoteViewer({ note, folderId, onSave, onClose, userId, us
                                     title,
                                     content,
                                     images,
-                                    pinHash: null
+                                    pinHash: null,
+                                    isPinned: noteIsPinned,
+                                    createdAt: createdAtRef.current,
+                                    updatedAt: { seconds: getNowSeconds() }
                                 });
                                 notify("Note lock removed!");
                             }

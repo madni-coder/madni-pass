@@ -380,7 +380,7 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                     onClick={() => setMobileOpen(false)}
                 />
 
-                <div className={`relative w-64 bg-card border-r border-border h-full flex flex-col z-50 pt-[env(safe-area-inset-top,0px)] transform transition-transform duration-300 ${mobileOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none'}`}>
+                <div className={`relative w-64 bg-card border-r border-border h-full flex flex-col z-50 pt-[env(safe-area-inset-top,0px)] pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] transform transition-transform duration-300 ${mobileOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none'}`}>
                     <button onClick={() => setMobileOpen(false)} className="absolute top-4 right-3 text-muted-foreground hover:text-foreground">
                         <FiX size={20} />
                     </button>
@@ -489,15 +489,20 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                         <DialogTitle>Account Settings</DialogTitle>
                     </DialogHeader>
                     <div className="py-4 space-y-4">
-                        <div className="space-y-1">
-                            <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Profile Information</label>
-                            <div className="p-3 bg-muted/50 border border-border rounded-xl">
-                                <p className="text-sm font-semibold text-foreground">
-                                    {user?.isAnonymous ? "Guest Mode" : user?.displayName || "User"}
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                    {user?.isAnonymous ? "Your data is only stored on this device" : user?.email || ""}
-                                </p>
+                        <div className="space-y-1.5">
+                            <label className="text-[11px] text-muted-foreground/75 font-semibold uppercase tracking-wider pl-1">Profile Information</label>
+                            <div className="flex items-center gap-3.5 p-4 bg-muted/30 border border-border/70 rounded-2xl shadow-xs">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary/80 to-primary flex items-center justify-center text-primary-foreground font-bold text-sm shrink-0 shadow-md shadow-primary/10 select-none">
+                                    {user?.isAnonymous ? "G" : (user?.displayName ? user.displayName.charAt(0).toUpperCase() : (user?.email ? user.email.charAt(0).toUpperCase() : "U"))}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-bold text-foreground truncate">
+                                        {user?.isAnonymous ? "Guest Mode" : user?.displayName || "User"}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground/85 mt-0.5 truncate">
+                                        {user?.isAnonymous ? "Your data is only stored on this device" : user?.email || ""}
+                                    </p>
+                                </div>
                             </div>
                         </div>
 

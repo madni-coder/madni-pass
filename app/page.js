@@ -698,11 +698,12 @@ export default function Home() {
       {notepadOpen && (
         <NoteViewer
           note={activeNote}
+          notes={notes}
           folderId={activeNote?.folderId ?? newNoteFolderId}
           userId={user.uid}
           userEmail={user?.email}
           onSave={handleSaveNote}
-          onClose={() => { setNotepadOpen(false); loadNotes(); }}
+          onClose={() => { setNotepadOpen(false); }}
           onDelete={handleDeleteNote}
           onRestore={handleRestoreNote}
           globalPinHash={globalPinHash}
