@@ -63,6 +63,7 @@ targets:
             CFBundleURLSchemes:
               - com.googleusercontent.apps.504994185739-bg3bbncjtel7rr79atm6bjnm9o3vpbso
               - com.googleusercontent.apps.504994185739-u1j476707tt5k18uifcevja1ifnh92hi
+              - com.googleusercontent.apps.504994185739-7cf3da83hg0rdd7khfov6e0cmhl4k9pv
     entitlements:
       path: app_iOS/app_iOS.entitlements
     scheme:
