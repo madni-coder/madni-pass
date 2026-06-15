@@ -380,7 +380,7 @@ export default function NoteViewer({ note, notes = [], folderId, onSave, onClose
             el.style.height = "auto";
             el.style.height = `${el.scrollHeight}px`;
         }
-    }, [title]);
+    }, [title, isUnlocked]);
 
     const handleClose = useCallback(() => {
         clearTimeout(saveTimerRef.current);
@@ -459,7 +459,7 @@ export default function NoteViewer({ note, notes = [], folderId, onSave, onClose
             el.style.height = "auto";
             el.style.height = `${el.scrollHeight}px`;
         }
-    }, [content]);
+    }, [content, isUnlocked]);
 
     const scrollToMatch = useCallback((idx) => {
         const ta = taRef.current;

@@ -713,7 +713,7 @@ export default function AuthPage() {
       )}
 
       {/* ── Content ── */}
-      <div className={`relative z-10 w-full max-w-5xl lg:max-w-6xl xl:max-w-7xl mx-auto px-5 flex flex-col md:flex-row items-center justify-center h-[100dvh] md:h-auto md:min-h-0 md:py-16 overflow-hidden md:overflow-visible ${isApp ? "pt-12 md:pt-0" : ""}`}>
+      <div className={`relative z-10 w-full max-w-5xl lg:max-w-6xl xl:max-w-7xl mx-auto px-5 flex flex-col md:flex-row items-center justify-center h-[100dvh] md:h-auto md:min-h-0 md:py-16 overflow-hidden md:overflow-visible auth-content-container ${isApp ? "pt-12 md:pt-0" : ""}`}>
         {/* ══ Lamp section ══ */}
         <div className="flex flex-col items-center gap-2 md:gap-3 lg:gap-4 shrink-0 h-[min(210px,42dvh)] md:h-auto justify-end pb-1 md:pb-0">
           <div className="flex-1 w-[165px] md:w-[340px] md:h-[440px] lg:w-[420px] lg:h-[540px] md:flex-none">

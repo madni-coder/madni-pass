@@ -24,6 +24,15 @@ export function AuthProvider({ children }) {
                 setUser(u);
                 setLoading(false);
             });
+            
+            // Add iOS platform class if running on iOS device/simulator
+            if (typeof window !== "undefined") {
+                const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+                if (isIOS) {
+                    document.documentElement.classList.add("platform-ios");
+                }
+            }
+            
             return unsubscribe;
         } catch (err) {
             console.error("[AuthContext] onAuthStateChanged registration failed:", err);
