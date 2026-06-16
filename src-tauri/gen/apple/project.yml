@@ -92,6 +92,7 @@ targets:
       - sdk: Security.framework
       - sdk: UIKit.framework
       - sdk: WebKit.framework
+      - sdk: AuthenticationServices.framework
       - package: Firebase
         product: FirebaseCore
     preBuildScripts:

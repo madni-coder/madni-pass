@@ -9,6 +9,7 @@ import {
 } from "firebase/auth";
 import { auth, getBrowserPopupRedirectResolver } from "@/lib/firebase";
 import { deleteUserAccountData } from "@/lib/db";
+import CryptoJS from "crypto-js";
 
 const AuthContext = createContext(null);
 
@@ -111,6 +112,82 @@ export function AuthProvider({ children }) {
             throw err;
         }
     };
+
+    const signInWithApple = async () => {
+        try {
+            // Detect Tauri iOS/Android context — use native plugin instead of popup.
+            const isMobileTauri = typeof window !== "undefined" &&
+                !!window.__TAURI_INTERNALS__ &&
+                (/Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+                 window.location.protocol === "tauri:");
+
+            if (isMobileTauri) {
+                const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+                if (!isIOS) {
+                    throw new Error("Sign in with Apple is only supported on iOS devices.");
+                }
+
+                // 1. Generate a secure random raw nonce
+                const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+                const array = new Uint32Array(32);
+                if (typeof window !== "undefined" && window.crypto) {
+                    window.crypto.getRandomValues(array);
+                }
+                let rawNonce = '';
+                for (let i = 0; i < 32; i++) {
+                    rawNonce += charset[array[i] % charset.length];
+                }
+
+                // 2. Hash the raw nonce using SHA-256 (hex format, lowercase)
+                const hashedNonce = CryptoJS.SHA256(rawNonce).toString(CryptoJS.enc.Hex);
+
+                // 3. Call the native Tauri command
+                const { invoke } = await import("@tauri-apps/api/core");
+                const rawResult = await invoke("apple_sign_in", { hashedNonce });
+                console.log("[AuthContext] apple_sign_in raw result:", rawResult, "type:", typeof rawResult);
+
+                // 4. Parse the JSON response (rawResult is a string from Rust)
+                let resultData;
+                if (typeof rawResult === "string") {
+                    resultData = JSON.parse(rawResult);
+                } else if (typeof rawResult === "object" && rawResult !== null) {
+                    resultData = rawResult;
+                } else {
+                    throw new Error("Apple Sign-In returned an unexpected result format.");
+                }
+
+                if (!resultData.identityToken) {
+                    throw new Error("Apple Sign-In did not return an identity token.");
+                }
+
+                // 5. Create the Firebase credential
+                const { OAuthProvider, signInWithCredential } = await import("firebase/auth");
+                const provider = new OAuthProvider("apple.com");
+                const credential = provider.credential({
+                    idToken: resultData.identityToken,
+                    rawNonce: rawNonce,
+                });
+
+                // 6. Sign in to Firebase Auth
+                const result = await signInWithCredential(auth, credential);
+                return result;
+
+            } else {
+                // Website path: standard Firebase popup
+                const { OAuthProvider, signInWithPopup } = await import("firebase/auth");
+                const provider = new OAuthProvider("apple.com");
+                provider.addScope("email");
+                provider.addScope("name");
+                
+                const resolver = await getBrowserPopupRedirectResolver();
+                const result = await signInWithPopup(auth, provider, resolver);
+                return result;
+            }
+        } catch (err) {
+            console.error("[AuthContext] signInWithApple failed:", err);
+            throw err;
+        }
+    };
     ;
 
     const signInWithGoogleSelectAccount = async () => {
@@ -184,7 +261,7 @@ export function AuthProvider({ children }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithGoogleSelectAccount, forgetLastGoogleEmail, signInAsGuest, logOut, deleteAccount }}>
+        <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithGoogleSelectAccount, forgetLastGoogleEmail, signInAsGuest, logOut, deleteAccount, signInWithApple }}>
             {children}
         </AuthContext.Provider>
     );

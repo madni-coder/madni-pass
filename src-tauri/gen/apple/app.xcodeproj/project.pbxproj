@@ -17,9 +17,11 @@
 		5C516481BCA83A182C2BCC94 /* assets in Resources */ = {isa = PBXBuildFile; fileRef = 3842AE2A64FB9933D0400EA4 /* assets */; };
 		618672DC8A5E0605441C9935 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0E2B15F176E4B041AE33EEEA /* UIKit.framework */; };
 		836D84C5F07860664DAF79C8 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D8F57162F5CC7AEDD55F173D /* WebKit.framework */; };
+		8E166DBA61C07464A9E70234 /* AppleSignInManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8E997EA6AA66B1377BAC0514 /* AppleSignInManager.mm */; };
 		9D59FB167BB4E699DA17D1E9 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 04B56F58E2E44DDE1D67E7B7 /* MetalKit.framework */; };
 		C6BD59C055C986EA4A77FDA2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AF1DE57E7D9CF13BB2E0E038 /* Assets.xcassets */; };
 		C869023DDFE275D42F3FBF29 /* libapp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 39EEC6A55698228E08917A52 /* libapp.a */; };
+		E1BAF273AD607BCC5C417A11 /* AuthenticationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F3A5A353BBD35AFEA869452F /* AuthenticationServices.framework */; };
 		E68F6CFDAED6503ABB4044A5 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CE1209BFDECB28E00189B168 /* Metal.framework */; };
 /* End PBXBuildFile section */
 
@@ -37,11 +39,14 @@
 		39EEC6A55698228E08917A52 /* libapp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libapp.a; sourceTree = "<group>"; };
 		682535EEFE1DA20BE07B123C /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
 		81E326B61ED92E1D1EECF952 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		8E997EA6AA66B1377BAC0514 /* AppleSignInManager.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AppleSignInManager.mm; sourceTree = "<group>"; };
 		9FACFFCB6E3743955F72464C /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		AF1DE57E7D9CF13BB2E0E038 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		CE1209BFDECB28E00189B168 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		D6E85620259E9F9BE9B2CC1D /* AppleSignInManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppleSignInManager.h; sourceTree = "<group>"; };
 		D8F57162F5CC7AEDD55F173D /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
 		F3673D372C5ABDD1AD6E7067 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		F3A5A353BBD35AFEA869452F /* AuthenticationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AuthenticationServices.framework; path = System/Library/Frameworks/AuthenticationServices.framework; sourceTree = SDKROOT; };
 		FBC720DFA1D01F55B0A32344 /* Lazy Notes.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Lazy Notes.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -58,6 +63,7 @@
 				324A1E9A4258E7911D4DAC39 /* Security.framework in Frameworks */,
 				618672DC8A5E0605441C9935 /* UIKit.framework in Frameworks */,
 				836D84C5F07860664DAF79C8 /* WebKit.framework in Frameworks */,
+				E1BAF273AD607BCC5C417A11 /* AuthenticationServices.framework in Frameworks */,
 				1292DFBC353451F01E5A0900 /* FirebaseCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -68,6 +74,7 @@
 		1BBF8C620E54F8C028CA130C /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				F3A5A353BBD35AFEA869452F /* AuthenticationServices.framework */,
 				1E81BD6B453D87B7F7B1597B /* CoreGraphics.framework */,
 				39EEC6A55698228E08917A52 /* libapp.a */,
 				CE1209BFDECB28E00189B168 /* Metal.framework */,
@@ -141,6 +148,8 @@
 		FB1C68C0357A1866B3D27465 /* app */ = {
 			isa = PBXGroup;
 			children = (
+				D6E85620259E9F9BE9B2CC1D /* AppleSignInManager.h */,
+				8E997EA6AA66B1377BAC0514 /* AppleSignInManager.mm */,
 				682535EEFE1DA20BE07B123C /* main.mm */,
 				329C38BE5E8B40354375D0D0 /* bindings */,
 			);
@@ -240,7 +249,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "export PATH=\"/usr/local/bin:/Users/madniapple/.cargo/bin:$PATH\"\nARCHS=\"${ARCHS:-arm64}\"\nif ! npm run -- tauri ios xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths \"${FRAMEWORK_SEARCH_PATHS:?}\" --header-search-paths \"${HEADER_SEARCH_PATHS:?}\" --gcc-preprocessor-definitions \"${GCC_preprocessor_definitions:-}\" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS}; then\n  echo \"tauri ios xcode-script failed. Checking if pre-compiled libapp.a exists...\"\n  for arch in ${ARCHS}; do\n    LIB_PATH=\"${SRCROOT}/Externals/${arch}/${CONFIGURATION}/libapp.a\"\n    if [ -s \"$LIB_PATH\" ] && [ \"$(wc -c < \"$LIB_PATH\")\" -gt 100 ]; then\n      echo \"Found existing valid libapp.a at $LIB_PATH. Proceeding with existing library.\"\n    else\n      echo \"Error: No valid libapp.a found at $LIB_PATH and xcode-script failed.\"\n      exit 1\n    fi\n  done\nfi\necho \"Performing library surgery to remove duplicate FFI symbols...\"\nfor arch in ${ARCHS}; do\n  echo \"Processing architecture: ${arch}\"\n  if [ -d \"${SRCROOT}/Externals/${arch}/${CONFIGURATION}\" ]; then\n    cd \"${SRCROOT}/Externals/${arch}/${CONFIGURATION}\" || continue\n    if [ -f libapp.a ]; then\n      echo \"Before surgery size of libapp.a is:\"\n      ls -lh libapp.a\n    else\n      echo \"Warning: libapp.a does not exist in $(pwd)!\"\n    fi\n    mkdir -p temp_extract\n    cd temp_extract || continue\n    ar -x ../libapp.a\n    rm -f ../libapp.a\n    ar -rcs ../libapp.a *.o\n    cd ..\n    rm -rf temp_extract\n  else\n    echo \"Directory for ${arch} does not exist, skipping library surgery.\"\n  fi\ndone\necho \"Library surgery completed!\"\n";
+			shellScript = "export PATH=\"/usr/local/bin:/Users/madniapple/.cargo/bin:$PATH\"\nARCHS=\"${ARCHS:-arm64}\"\ncd ../../..\nif ! npm run -- tauri ios xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths \"${FRAMEWORK_SEARCH_PATHS:?}\" --header-search-paths \"${HEADER_SEARCH_PATHS:?}\" --gcc-preprocessor-definitions \"${GCC_preprocessor_definitions:-}\" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS}; then\n  echo \"tauri ios xcode-script failed. Checking if pre-compiled libapp.a exists...\"\n  for arch in ${ARCHS}; do\n    LIB_PATH=\"${SRCROOT}/Externals/${arch}/${CONFIGURATION}/libapp.a\"\n    if [ -s \"$LIB_PATH\" ] && [ \"$(wc -c < \"$LIB_PATH\")\" -gt 100 ]; then\n      echo \"Found existing valid libapp.a at $LIB_PATH. Proceeding with existing library.\"\n    else\n      echo \"Error: No valid libapp.a found at $LIB_PATH and xcode-script failed.\"\n      exit 1\n    fi\n  done\nfi\necho \"Performing library surgery to remove duplicate FFI symbols...\"\nfor arch in ${ARCHS}; do\n  echo \"Processing architecture: ${arch}\"\n  if [ -d \"${SRCROOT}/Externals/${arch}/${CONFIGURATION}\" ]; then\n    cd \"${SRCROOT}/Externals/${arch}/${CONFIGURATION}\" || continue\n    if [ -f libapp.a ]; then\n      echo \"Before surgery size of libapp.a is:\"\n      ls -lh libapp.a\n    else\n      echo \"Warning: libapp.a does not exist in $(pwd)!\"\n    fi\n    mkdir -p temp_extract\n    cd temp_extract || continue\n    ar -x ../libapp.a\n    rm -f ../libapp.a\n    ar -rcs ../libapp.a *.o\n    cd ..\n    rm -rf temp_extract\n  else\n    echo \"Directory for ${arch} does not exist, skipping library surgery.\"\n  fi\ndone\necho \"Library surgery completed!\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -249,6 +258,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8E166DBA61C07464A9E70234 /* AppleSignInManager.mm in Sources */,
 				53CDD0ACFBE8BDF1550B2E53 /* main.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

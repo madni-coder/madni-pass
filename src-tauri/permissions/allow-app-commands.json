@@ -1,0 +1,18 @@
+{
+  "default": null,
+  "permission": [
+    {
+      "identifier": "allow-app-commands",
+      "description": "Permissions for core app commands",
+      "commands": {
+        "allow": [
+          "apple_sign_in",
+          "send_reset_email",
+          "exit_app",
+          "log_message"
+        ],
+        "deny": []
+      }
+    }
+  ]
+}

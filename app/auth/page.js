@@ -6,6 +6,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { FcGoogle } from "react-icons/fc";
+import { FaApple } from "react-icons/fa";
 import { FiSun, FiMoon } from "react-icons/fi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -515,12 +516,13 @@ export default function AuthPage() {
     signInWithGoogleSelectAccount,
     signInAsGuest,
     loading,
+    signInWithApple,
   } = useAuth();
 
   const { theme, setTheme, resolvedTheme } = useTheme();
   const router = useRouter();
 
-  const [signingIn, setSigningIn] = useState(false);
+  const [signingIn, setSigningIn] = useState("");
   const [error, setError] = useState("");
   const [showGuestForm, setShowGuestForm] = useState(false);
   const [guestName, setGuestName] = useState("");
@@ -528,9 +530,14 @@ export default function AuthPage() {
   const [introCompleted, setIntroCompleted] = useState(false);
   const [introFadeOut, setIntroFadeOut] = useState(false);
   const [mounted, setMounted] = useState(false);
-
+  const [showAppleButton, setShowAppleButton] = useState(false);
+ 
   useEffect(() => {
     setMounted(true);
+    if (typeof window !== "undefined") {
+      const isAndroidCheck = /Android/i.test(navigator.userAgent);
+      setShowAppleButton(!isAndroidCheck);
+    }
   }, []);
 
   const activeTheme = mounted ? resolvedTheme : "dark";
@@ -584,7 +591,7 @@ export default function AuthPage() {
     })[code] ?? "Sign in failed. Please try again.";
 
   const handleGoogle = async () => {
-    setSigningIn(true);
+    setSigningIn("google");
     setError("");
     try {
       await signInWithGoogle();
@@ -592,13 +599,26 @@ export default function AuthPage() {
     } catch (e) {
       setError(e?.code ? getFriendlyError(e.code) : e?.message || String(e));
     } finally {
-      setSigningIn(false);
+      setSigningIn("");
     }
   };
 
+  const handleApple = async () => {
+    setSigningIn("apple");
+    setError("");
+    try {
+      await signInWithApple();
+      router.replace("/");
+    } catch (e) {
+      setError(e?.code ? getFriendlyError(e.code) : e?.message || String(e));
+    } finally {
+      setSigningIn("");
+    }
+  };
+ 
   const handleGuestLogin = async () => {
     if (!guestName.trim()) return;
-    setSigningIn(true);
+    setSigningIn("guest");
     setError("");
     try {
       await signInAsGuest(guestName.trim());
@@ -606,7 +626,7 @@ export default function AuthPage() {
     } catch (e) {
       setError(e?.code ? getFriendlyError(e.code) : e?.message || String(e));
     } finally {
-      setSigningIn(false);
+      setSigningIn("");
     }
   };
 
@@ -880,10 +900,10 @@ export default function AuthPage() {
                     </div>
                     <Button
                       onClick={handleGuestLogin}
-                      disabled={signingIn || !guestName.trim()}
+                      disabled={!!signingIn || !guestName.trim()}
                       className="w-full h-11 md:h-12 lg:h-14 md:text-base lg:text-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl disabled:opacity-50"
                     >
-                      {signingIn ? "Entering…" : "Start as Guest"}
+                      {signingIn === "guest" ? "Entering…" : "Start as Guest"}
                     </Button>
                   </div>
                 )}
@@ -903,12 +923,25 @@ export default function AuthPage() {
                 {!showGuestForm && (
                   <Button
                     onClick={handleGoogle}
-                    disabled={signingIn}
+                    disabled={!!signingIn}
                     className="w-full h-12 md:h-13 lg:h-15 gap-3 md:gap-4 lg:gap-5 text-sm md:text-base lg:text-lg font-semibold rounded-xl bg-background/60 hover:bg-muted/70 border border-border/70 shadow-sm active:scale-[0.98] transition-all text-foreground"
                     variant="outline"
                   >
                     <FcGoogle className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 shrink-0" />
-                    {signingIn ? "Signing in…" : "Continue with Google"}
+                    {signingIn === "google" ? "Signing in…" : "Continue with Google"}
+                  </Button>
+                )}
+
+                {/* Apple sign-in */}
+                {!showGuestForm && showAppleButton && (
+                  <Button
+                    onClick={handleApple}
+                    disabled={!!signingIn}
+                    className="w-full h-12 md:h-13 lg:h-15 gap-3 md:gap-4 lg:gap-5 text-sm md:text-base lg:text-lg font-semibold rounded-xl bg-black hover:bg-black/90 border border-black/70 shadow-sm active:scale-[0.98] transition-all text-white dark:bg-white dark:hover:bg-white/90 dark:text-black dark:border-white/70"
+                    variant="outline"
+                  >
+                    <FaApple className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 shrink-0" />
+                    {signingIn === "apple" ? "Signing in…" : "Sign in with Apple"}
                   </Button>
                 )}
 

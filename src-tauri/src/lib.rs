@@ -69,11 +69,81 @@ fn log_message(message: String) {
   println!("[WebView Log] {}", message);
 }
 
+use std::sync::{Mutex, OnceLock};
+use tokio::sync::oneshot;
+
+static APPLE_SIGN_IN_SENDER: OnceLock<Mutex<Option<oneshot::Sender<Result<String, String>>>>> = OnceLock::new();
+
+fn get_apple_sender() -> &'static Mutex<Option<oneshot::Sender<Result<String, String>>>> {
+  APPLE_SIGN_IN_SENDER.get_or_init(|| Mutex::new(None))
+}
+
+#[cfg(target_os = "ios")]
+extern "C" {
+  fn ios_sign_in_with_apple(hashed_nonce: *const std::os::raw::c_char);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rust_apple_sign_in_callback(
+  result_json: *const std::os::raw::c_char,
+  error_str: *const std::os::raw::c_char,
+) {
+  use std::ffi::CStr;
+
+  let result: Result<String, String> = if !result_json.is_null() {
+    let c_str = CStr::from_ptr(result_json);
+    match c_str.to_str() {
+      Ok(s) => Ok(s.to_string()),
+      Err(e) => Err(e.to_string()),
+    }
+  } else if !error_str.is_null() {
+    let c_str = CStr::from_ptr(error_str);
+    match c_str.to_str() {
+      Ok(s) => Err(s.to_string()),
+      Err(e) => Err(e.to_string()),
+    }
+  } else {
+    Err("Unknown error during Sign in with Apple".to_string())
+  };
+
+  let mut sender_lock = get_apple_sender().lock().unwrap();
+  if let Some(sender) = sender_lock.take() {
+    let _ = sender.send(result);
+  }
+}
+
+#[tauri::command]
+async fn apple_sign_in(hashed_nonce: String) -> Result<String, String> {
+  #[cfg(target_os = "ios")]
+  {
+    use std::ffi::CString;
+
+    let (tx, rx) = oneshot::channel::<Result<String, String>>();
+    {
+      let mut sender = get_apple_sender().lock().unwrap();
+      *sender = Some(tx);
+    }
+
+    let c_nonce = CString::new(hashed_nonce).map_err(|e| e.to_string())?;
+    unsafe {
+      ios_sign_in_with_apple(c_nonce.as_ptr());
+    }
+
+    rx.await.map_err(|e| e.to_string())?
+  }
+
+  #[cfg(not(target_os = "ios"))]
+  {
+    let _ = hashed_nonce;
+    Err("Sign in with Apple is only supported on iOS devices.".to_string())
+  }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
     .plugin(tauri_plugin_google_auth::init())
-    .invoke_handler(tauri::generate_handler![send_reset_email, exit_app, log_message])
+    .invoke_handler(tauri::generate_handler![send_reset_email, exit_app, log_message, apple_sign_in])
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(
