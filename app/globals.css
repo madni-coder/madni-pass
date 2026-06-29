@@ -399,5 +399,6 @@
     background-color: var(--primary);
     border-radius: 9999px;
     animation: shimmer-progress 1.6s infinite ease-in-out;
+    box-shadow: 0 0 10px var(--primary);
 }
 
