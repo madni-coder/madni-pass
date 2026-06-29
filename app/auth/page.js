@@ -610,7 +610,12 @@ export default function AuthPage() {
       await signInWithApple();
       router.replace("/");
     } catch (e) {
-      setError(e?.code ? getFriendlyError(e.code) : e?.message || String(e));
+      const errMsg = e?.message || String(e);
+      if (errMsg.includes("1001") || errMsg.toLowerCase().includes("canceled") || errMsg.toLowerCase().includes("cancelled")) {
+        setError("Sign in was cancelled.");
+      } else {
+        setError(e?.code ? getFriendlyError(e.code) : errMsg);
+      }
     } finally {
       setSigningIn("");
     }
