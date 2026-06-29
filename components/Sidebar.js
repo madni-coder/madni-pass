@@ -31,7 +31,8 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
     const [platformName, setPlatformName] = useState("Web");
 
     useEffect(() => {
-        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+                      (typeof navigator !== "undefined" && navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         const isAndroid = /Android/i.test(navigator.userAgent);
         if (isIOS) {
             setCurrentVersion(process.env.NEXT_PUBLIC_IOS_VERSION || "0.0.0");

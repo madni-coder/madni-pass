@@ -28,7 +28,8 @@ export function AuthProvider({ children }) {
             
             // Add iOS platform class if running on iOS device/simulator
             if (typeof window !== "undefined") {
-                const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+                const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+                              (typeof navigator !== "undefined" && navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
                 if (isIOS) {
                     document.documentElement.classList.add("platform-ios");
                 }
@@ -46,18 +47,18 @@ export function AuthProvider({ children }) {
         const provider = new GoogleAuthProvider();
 
         try {
-            // Detect Tauri iOS/Android context — use native plugin instead of popup.
-            // Check: __TAURI_INTERNALS__ present AND (mobile UA OR tauri:// protocol)
             const isMobileTauri = typeof window !== "undefined" &&
                 !!window.__TAURI_INTERNALS__ &&
                 (/Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+                 (typeof navigator !== "undefined" && navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
                  window.location.protocol === "tauri:");
 
             if (isMobileTauri) {
                 const { signIn } = await import('@choochmeque/tauri-plugin-google-auth-api');
                 let clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
                 
-                const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+                const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+                              (typeof navigator !== "undefined" && navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
                 const isAndroid = /Android/i.test(navigator.userAgent);
                 
                 if (isIOS && process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID_IOS) {
@@ -115,14 +116,15 @@ export function AuthProvider({ children }) {
 
     const signInWithApple = async () => {
         try {
-            // Detect Tauri iOS/Android context — use native plugin instead of popup.
             const isMobileTauri = typeof window !== "undefined" &&
                 !!window.__TAURI_INTERNALS__ &&
                 (/Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+                 (typeof navigator !== "undefined" && navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
                  window.location.protocol === "tauri:");
 
             if (isMobileTauri) {
-                const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+                const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+                              (typeof navigator !== "undefined" && navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
                 if (!isIOS) {
                     throw new Error("Sign in with Apple is only supported on iOS devices.");
                 }

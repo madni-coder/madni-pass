@@ -118,6 +118,13 @@ async fn apple_sign_in(hashed_nonce: String) -> Result<String, String> {
   {
     use std::ffi::CString;
 
+    // Force the compiler to keep the callback symbol in the static library by calling it conditionally
+    if hashed_nonce == "FORCE_KEEP_SYMBOL_DO_NOT_CALL" {
+      unsafe {
+        rust_apple_sign_in_callback(std::ptr::null(), std::ptr::null());
+      }
+    }
+
     let (tx, rx) = oneshot::channel::<Result<String, String>>();
     {
       let mut sender = get_apple_sender().lock().unwrap();

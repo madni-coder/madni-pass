@@ -55,3 +55,9 @@ src-tauri/gen/apple/app.xcworkspace/
 src-tauri/gen/apple/build/
 src-tauri/gen/apple/Pods-app_iOS/
 src-tauri/gen/apple/Podfile.lock
+
+# iOS web assets (generated from out/ before each archive — do not commit)
+src-tauri/gen/apple/assets/
+
+# Xcode auto-generated project file (generated from project.yml via XcodeGen)
+src-tauri/gen/apple/app.xcodeproj/project.pbxproj

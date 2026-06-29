@@ -58,6 +58,7 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         CFBundleShortVersionString: 0.2.0
         CFBundleVersion: "0.2.0"
+        ITSAppUsesNonExemptEncryption: false
         CFBundleURLTypes:
           - CFBundleTypeRole: Editor
             CFBundleURLSchemes:
@@ -96,6 +97,55 @@ targets:
       - package: Firebase
         product: FirebaseCore
     preBuildScripts:
+      - script: |
+          export PATH="/usr/local/bin:/usr/bin:/bin:/Users/madniapple/.cargo/bin:$PATH"
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+          # SRCROOT = .../madni-pass/src-tauri/gen/apple  →  3 levels up = madni-pass/
+          WEB_ROOT="$(cd "${SRCROOT}/../../.." && pwd)"
+
+          echo "=== Building Next.js production bundle ==="
+          echo "CONFIGURATION: ${CONFIGURATION}"
+          echo "SRCROOT: ${SRCROOT}"
+          echo "WEB_ROOT: ${WEB_ROOT}"
+
+          cd "${WEB_ROOT}" || { echo "ERROR: Cannot cd to ${WEB_ROOT}"; exit 1; }
+
+          # Find npm — try common locations
+          NPM_BIN="$(which npm 2>/dev/null || echo '')"
+          if [ -z "${NPM_BIN}" ]; then
+            for p in /usr/local/bin/npm /opt/homebrew/bin/npm ~/.nvm/versions/node/*/bin/npm; do
+              [ -f "$p" ] && NPM_BIN="$p" && break
+            done
+          fi
+          echo "Using npm: ${NPM_BIN}"
+
+          if [ "${CONFIGURATION}" = "release" ]; then
+            echo "Release build — running npm run build..."
+            "${NPM_BIN}" run build || { echo "ERROR: npm run build failed!"; exit 1; }
+            echo "✅ Next.js build complete"
+          else
+            echo "Debug build — skipping npm run build (using existing out/)"
+          fi
+
+          echo "=== Copying web assets to Xcode project ==="
+          ASSETS_DIR="${SRCROOT}/assets"
+          OUT_DIR="${WEB_ROOT}/out"
+
+          if [ -d "${OUT_DIR}" ]; then
+            rm -rf "${ASSETS_DIR}"
+            cp -R "${OUT_DIR}" "${ASSETS_DIR}"
+            echo "✅ Copied ${OUT_DIR} → ${ASSETS_DIR}"
+            echo "Assets count: $(find "${ASSETS_DIR}" | wc -l | tr -d ' ') files"
+          else
+            echo "ERROR: out/ not found at ${OUT_DIR} — did npm run build succeed?"
+            exit 1
+          fi
+        name: Build Web Assets
+        basedOnDependencyAnalysis: false
+        outputFiles:
+          - $(SRCROOT)/assets
       - script: |
           export PATH="/usr/local/bin:/Users/madniapple/.cargo/bin:$PATH"
           ARCHS="${ARCHS:-arm64}"
