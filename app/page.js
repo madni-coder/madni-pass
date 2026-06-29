@@ -477,7 +477,7 @@ export default function Home() {
         <div 
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full blur-[85px] pointer-events-none" 
           style={{
-            backgroundColor: `${primaryColor || '#4cc9d0'}15`
+            backgroundColor: '#4cc9d015'
           }}
         />
 
@@ -498,14 +498,14 @@ export default function Home() {
           {/* Title */}
           <div className="space-y-1">
             <h2 className="text-xl font-bold tracking-tight text-foreground">
-              Lazy <span style={{ color: primaryColor || '#4cc9d0' }}>Notes</span>
+              Lazy <span style={{ color: '#4cc9d0' }}>Notes</span>
             </h2>
             <p className="text-xs text-muted-foreground">Preparing your notes...</p>
           </div>
 
           {/* Premium Animated Loading Bar */}
           <div className="w-full h-1 bg-muted/60 rounded-full overflow-hidden relative shadow-inner">
-            <div className="animate-shimmer-progress" style={{ boxShadow: `0 0 10px ${primaryColor || '#4cc9d0'}` }} />
+            <div className="animate-shimmer-progress" style={{ boxShadow: '0 0 10px #4cc9d0' }} />
           </div>
         </div>
 
