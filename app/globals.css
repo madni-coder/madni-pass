@@ -378,3 +378,26 @@
     padding-top: calc(env(safe-area-inset-top, 0px) + 2rem) !important;
 }
 
+@keyframes shimmer-progress {
+    0% {
+        left: -40%;
+        width: 40%;
+    }
+    50% {
+        left: 30%;
+        width: 60%;
+    }
+    100% {
+        left: 100%;
+        width: 30%;
+    }
+}
+.animate-shimmer-progress {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background-color: var(--primary);
+    border-radius: 9999px;
+    animation: shimmer-progress 1.6s infinite ease-in-out;
+}
+

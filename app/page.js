@@ -472,10 +472,45 @@ export default function Home() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-2 p-4">
-        <FiLoader size={32} className="animate-spin text-primary" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 relative overflow-hidden">
+        {/* Subtle background glow */}
+        <div 
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full blur-[85px] pointer-events-none" 
+          style={{
+            backgroundColor: `${primaryColor || '#4cc9d0'}15`
+          }}
+        />
+
+        <div className="flex flex-col items-center gap-6 z-10 max-w-xs w-full text-center">
+          {/* Logo with pulsing animation */}
+          <div className="w-16 h-16 rounded-full overflow-hidden border border-border/40 shadow-lg bg-card flex items-center justify-center animate-pulse duration-1000">
+            <img
+              src="/lazyNoteIcon.png"
+              alt="Lazy Notes"
+              className="w-10 h-10 object-contain"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = "/lightLogo.png";
+              }}
+            />
+          </div>
+
+          {/* Title */}
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold tracking-tight text-foreground">
+              Lazy <span style={{ color: primaryColor || '#4cc9d0' }}>Notes</span>
+            </h2>
+            <p className="text-xs text-muted-foreground">Preparing your notes...</p>
+          </div>
+
+          {/* Premium Animated Loading Bar */}
+          <div className="w-full h-1 bg-muted/60 rounded-full overflow-hidden relative shadow-inner">
+            <div className="animate-shimmer-progress" style={{ boxShadow: `0 0 10px ${primaryColor || '#4cc9d0'}` }} />
+          </div>
+        </div>
+
         {lastError && (
-          <div className="text-xs text-destructive bg-destructive/10 p-3 rounded-xl mt-4 border border-destructive/20 max-w-sm text-center break-all font-mono">
+          <div className="absolute bottom-10 text-xs text-destructive bg-destructive/10 p-3 rounded-xl border border-destructive/20 max-w-sm text-center break-all font-mono z-10">
             Error: {lastError}
           </div>
         )}
