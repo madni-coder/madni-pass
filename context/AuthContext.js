@@ -14,15 +14,50 @@ import CryptoJS from "crypto-js";
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState(() => {
+        if (typeof window !== "undefined") {
+            try {
+                const cached = localStorage.getItem("cached_user");
+                return cached ? JSON.parse(cached) : null;
+            } catch (e) {
+                return null;
+            }
+        }
+        return null;
+    });
+    const [loading, setLoading] = useState(() => {
+        if (typeof window !== "undefined") {
+            try {
+                return !localStorage.getItem("cached_user");
+            } catch (e) {
+                return true;
+            }
+        }
+        return true;
+    });
 
     useEffect(() => {
         console.log("[AuthContext] Registering onAuthStateChanged. Auth instance:", auth);
         try {
             const unsubscribe = onAuthStateChanged(auth, (u) => {
                 console.log("[AuthContext] onAuthStateChanged fired. User:", u ? u.uid : "null");
-                setUser(u);
+                if (u) {
+                    const userData = {
+                        uid: u.uid,
+                        email: u.email,
+                        displayName: u.displayName,
+                        photoURL: u.photoURL,
+                    };
+                    setUser(userData);
+                    try {
+                        localStorage.setItem("cached_user", JSON.stringify(userData));
+                    } catch (e) {}
+                } else {
+                    setUser(null);
+                    try {
+                        localStorage.removeItem("cached_user");
+                    } catch (e) {}
+                }
                 setLoading(false);
             });
             
