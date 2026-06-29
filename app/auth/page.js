@@ -733,10 +733,10 @@ export default function AuthPage() {
       )}
 
       {/* ── Content ── */}
-      <div className={`relative z-10 w-full max-w-5xl lg:max-w-6xl xl:max-w-7xl mx-auto px-5 flex flex-col md:flex-row items-center justify-center h-[100dvh] md:h-auto md:min-h-0 md:py-16 overflow-hidden md:overflow-visible auth-content-container ${isApp ? "pt-12 md:pt-0" : ""}`}>
+      <div className={`relative z-10 w-full max-w-5xl lg:max-w-6xl xl:max-w-7xl mx-auto px-5 flex flex-col lg:flex-row items-center justify-center h-[100dvh] lg:h-auto lg:min-h-0 lg:py-16 overflow-hidden lg:overflow-visible auth-content-container ${isApp ? "pt-12 lg:pt-0" : ""}`}>
         {/* ══ Lamp section ══ */}
-        <div className="flex flex-col items-center gap-2 md:gap-3 lg:gap-4 shrink-0 h-[min(210px,42dvh)] md:h-auto justify-end pb-1 md:pb-0">
-          <div className="flex-1 w-[165px] md:w-[340px] md:h-[440px] lg:w-[420px] lg:h-[540px] md:flex-none">
+        <div className="flex flex-col items-center gap-2 lg:gap-3 xl:gap-4 shrink-0 h-[min(210px,42dvh)] lg:h-auto justify-end pb-1 lg:pb-0">
+          <div className="flex-1 w-[165px] lg:w-[340px] lg:h-[440px] xl:w-[420px] xl:h-[540px] lg:flex-none">
             {mounted && (
               <LampSVG
                 isOn={lampOn}
@@ -755,7 +755,7 @@ export default function AuthPage() {
 
         {/* Desktop-only gap spacer that grows when form appears */}
         <div
-          className="hidden md:block shrink-0 md:[--gap-width:4.5rem] lg:[--gap-width:6.5rem]"
+          className="hidden lg:block shrink-0 lg:[--gap-width:4.5rem] xl:[--gap-width:6.5rem]"
           style={{
             width: lampOn ? "var(--gap-width, 3.5rem)" : "0",
             transition: "width 0.7s cubic-bezier(0.16,1,0.3,1)",
@@ -764,7 +764,7 @@ export default function AuthPage() {
 
         {/* ══ Form section — collapses to 0 when lamp is off ══ */}
         <div
-          className="flex-1 min-h-0 md:flex-none shrink-0 overflow-hidden w-full md:[--form-max-width:38rem] lg:[--form-max-width:44rem] xl:[--form-max-width:48rem]"
+          className="flex-1 min-h-0 lg:flex-none shrink-0 overflow-hidden w-full lg:[--form-max-width:38rem] xl:[--form-max-width:44rem]"
           style={{
             maxWidth: lampOn ? "var(--form-max-width, min(32rem, 100%))" : "0",
             maxHeight: lampOn ? "900px" : "0",
@@ -775,7 +775,7 @@ export default function AuthPage() {
           }}
         >
           {/* Inner: fills height on mobile for internal scroll, auto on desktop */}
-          <div className="h-full md:h-auto overflow-y-auto md:overflow-visible pt-3 md:pt-0 pb-3 md:pb-0">
+          <div className="h-full lg:h-auto overflow-y-auto lg:overflow-visible pt-3 lg:pt-0 pb-3 lg:pb-0">
             {/* ── Card ── */}
             <div
               className="rounded-3xl border bg-card backdrop-blur-2xl overflow-hidden"
