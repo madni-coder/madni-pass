@@ -542,6 +542,52 @@ export default function NoteViewer({ note, notes = [], folderId, onSave, onClose
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [title, content]);
 
+    // ─── Retry cloud save when network comes back online ──────────────────────
+    useEffect(() => {
+        if (!isOnline || !isDirtyRef.current) return;
+        if (note?.inBin) return;
+
+        const currentTitle = titleRefVal.current.trim();
+        if (!currentTitle) return;
+
+        const currentContent = contentRefVal.current;
+        const currentImages = imagesRef.current;
+        const master = userId;
+        const encTitle = encrypt(currentTitle, master);
+        const encContent = encrypt(currentContent, master);
+
+        console.log("[NoteViewer] Network restored — retrying pending cloud save...");
+        setSaveStatus("saved");
+        setTimeout(() => setSaveStatus("idle"), 2000);
+
+        if (!noteCreatedVal.current) {
+            if (creatingRef.current) return;
+            creatingRef.current = true;
+            createNote(userId, folderIdVal.current ?? null, encTitle, encContent, noteIdRef.current, currentImages)
+                .then(() => {
+                    setNoteCreated(true);
+                    isDirtyRef.current = false;
+                    console.log("[NoteViewer] Offline note created on cloud after reconnect.");
+                })
+                .catch((err) => {
+                    console.error("[NoteViewer] Retry cloud creation failed:", err);
+                })
+                .finally(() => {
+                    creatingRef.current = false;
+                });
+        } else {
+            updateNote(noteIdRef.current, encTitle, encContent, currentImages)
+                .then(() => {
+                    isDirtyRef.current = false;
+                    console.log("[NoteViewer] Offline note synced to cloud after reconnect.");
+                })
+                .catch((err) => {
+                    console.error("[NoteViewer] Retry cloud update failed:", err);
+                });
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOnline]);
+
     const handleImageUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;

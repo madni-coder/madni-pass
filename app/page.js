@@ -260,25 +260,41 @@ export default function Home() {
     if (!user) return;
     notesCacheRef.current.clear();
 
+    // ── Step 1: Show localStorage cache INSTANTLY (works offline too) ──
+    let hadCache = false;
     try {
       const cached = localStorage.getItem(`user_folders_${user.uid}`);
       if (cached) {
         const parsed = JSON.parse(cached);
-        Promise.resolve().then(() => {
-          setFolders(parsed);
-          setLoading(false);
-        });
-      } else {
-        Promise.resolve().then(() => setLoading(true));
+        setFolders(parsed);
+        setLoading(false);
+        hadCache = true;
       }
-    } catch (e) {
-      Promise.resolve().then(() => setLoading(true));
+    } catch (e) { }
+
+    if (!hadCache) setLoading(true);
+
+    // ── Step 2: Skip Firebase if offline — cached data is enough ──
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setLoading(false);
+      return;
     }
 
-    getFolders(user.uid).then((fresh) => {
-      setFolders(fresh);
-      try { localStorage.setItem(`user_folders_${user.uid}`, JSON.stringify(fresh)); } catch (e) { }
-    }).catch(() => { }).finally(() => setLoading(false));
+    // ── Step 3: Race Firebase against 8s timeout so it never hangs ──
+    const firebasePromise = getFolders(user.uid);
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("offline-timeout")), 8000)
+    );
+
+    Promise.race([firebasePromise, timeoutPromise])
+      .then((fresh) => {
+        setFolders(fresh);
+        try { localStorage.setItem(`user_folders_${user.uid}`, JSON.stringify(fresh)); } catch (e) { }
+      })
+      .catch((err) => {
+        if (err?.message !== "offline-timeout") console.warn("[Folders] Fetch failed:", err);
+      })
+      .finally(() => setLoading(false));
   }, [user]);
 
   // Sync folders changes to localStorage (created, deleted, renamed, locked, unlocked)
@@ -297,24 +313,33 @@ export default function Home() {
       return;
     }
 
+    // ── Step 1: Show localStorage cache INSTANTLY (works offline too) ──
     const cacheName = `user_notes_${user.uid}_${selectedFolder?.id || "all"}`;
     try {
       const cached = localStorage.getItem(cacheName);
       if (cached) {
-        setNotes(JSON.parse(cached));
+        const parsed = JSON.parse(cached);
+        setNotes(parsed);
+        writeNotesCache(selectedFolder, parsed);
       }
     } catch (e) { }
 
+    // ── Step 2: Skip Firebase if offline — cached data is enough ──
+    if (typeof navigator !== "undefined" && !navigator.onLine) return;
+
+    // ── Step 3: Race Firebase against 8s timeout so it never hangs ──
     try {
-      const raw = selectedFolder
-        ? await getNotes(user.uid, selectedFolder.id)
-        : await getAllNotes(user.uid);
+      const fetchPromise = selectedFolder
+        ? getNotes(user.uid, selectedFolder.id)
+        : getAllNotes(user.uid);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("offline-timeout")), 8000)
+      );
 
-      // Use the user's Firebase UID as the encryption key automatically
+      const raw = await Promise.race([fetchPromise, timeoutPromise]);
+
+      // Decrypt fields; fallback to plaintext if decryption fails
       const master = user.uid;
-
-
-      // Decrypt fields if possible; gracefully fallback to plaintext when decryption fails
       const processed = raw.map((n) => {
         const title = decrypt(n.title, master) ?? n.title;
         const content = decrypt(n.content, master) ?? n.content;
@@ -326,7 +351,10 @@ export default function Home() {
       try {
         localStorage.setItem(cacheName, JSON.stringify(processed));
       } catch (e) { }
-    } catch { /* ignore */ }
+    } catch (err) {
+      if (err?.message !== "offline-timeout") console.warn("[Notes] Fetch failed:", err);
+      // Cached data already shown above — nothing to do
+    }
   }, [user, selectedFolder, getNotesCacheKey, writeNotesCache]);
 
   useEffect(() => { loadNotes(); }, [loadNotes]);
@@ -337,6 +365,25 @@ export default function Home() {
     try { window.addEventListener("masterPasswordSet", handler); } catch { }
     return () => { try { window.removeEventListener("masterPasswordSet", handler); } catch { } };
   }, [loadNotes]);
+
+  // ─── Reload folders + notes when network comes back online ───────────────────
+  useEffect(() => {
+    if (!user) return;
+    const handleOnline = () => {
+      console.log("[Home] Network restored — refreshing folders and notes from cloud...");
+      notify("☁️ Back online — syncing data...");
+      // Refresh folders
+      getFolders(user.uid).then((fresh) => {
+        setFolders(fresh);
+        try { localStorage.setItem(`user_folders_${user.uid}`, JSON.stringify(fresh)); } catch (e) { }
+      }).catch(() => { });
+      // Refresh notes (clear memory cache so fresh data is fetched)
+      notesCacheRef.current.clear();
+      loadNotes();
+    };
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+  }, [user, loadNotes]);
 
   const displayNotes = (viewingBin
     ? notes.filter((n) => n.inBin)
@@ -506,7 +553,7 @@ export default function Home() {
             <h2 className="text-xl font-bold tracking-tight text-foreground">
               Lazy <span className="text-primary">Notes</span>
             </h2>
-            <p className="text-xs text-muted-foreground">Preparing your notes...</p>
+            <p className="text-xs text-muted-foreground">Loading your notes...</p>
           </div>
 
           {/* Premium Animated Loading Bar */}
