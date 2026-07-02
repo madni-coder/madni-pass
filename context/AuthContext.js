@@ -77,6 +77,24 @@ export function AuthProvider({ children }) {
         }
     }, []);
 
+    useEffect(() => {
+        const checkRedirectResult = async () => {
+            const isMobileWeb = typeof window !== "undefined" && !window.__TAURI_INTERNALS__ && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (isMobileWeb) {
+                try {
+                    const [{ getRedirectResult }, resolver] = await Promise.all([
+                        import("firebase/auth"),
+                        getBrowserPopupRedirectResolver()
+                    ]);
+                    await getRedirectResult(auth, resolver);
+                } catch (e) {
+                    console.error("[AuthContext] getRedirectResult failed:", e);
+                }
+            }
+        };
+        checkRedirectResult();
+    }, []);
+
     const signInWithGoogle = async (opts = {}) => {
         const { selectAccount = false } = opts;
         const provider = new GoogleAuthProvider();
