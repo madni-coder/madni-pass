@@ -3,6 +3,7 @@ options:
   bundleIdPrefix: com.lazynotesApple.com
   deploymentTarget:
     iOS: 14.0
+  defaultConfig: release
 fileGroups: [../../src]
 configs:
   debug: debug
@@ -74,14 +75,23 @@ targets:
     settings:
       base:
         ENABLE_BITCODE: false
-        ARCHS: [arm64, x86_64]
-        VALID_ARCHS: arm64  x86_64 
         LIBRARY_SEARCH_PATHS: $(inherited) $(PROJECT_DIR)/Externals/$(CURRENT_ARCH)/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)
         ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES: $(inherited)
-        EXCLUDED_ARCHS[sdk=iphoneos*]: x86_64
-        "EXCLUDED_ARCHS[sdk=iphonesimulator*]": arm64
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: "W5Q3VW5AX8"
+      configs:
+        debug:
+          ARCHS: [arm64, x86_64]
+          VALID_ARCHS: "arm64 x86_64"
+          EXCLUDED_ARCHS[sdk=iphoneos*]: x86_64
+          "EXCLUDED_ARCHS[sdk=iphonesimulator*]": arm64
+        release:
+          ARCHS: [arm64]
+          VALID_ARCHS: "arm64"
+          EXCLUDED_ARCHS[sdk=iphoneos*]: x86_64
+          "EXCLUDED_ARCHS[sdk=iphonesimulator*]": arm64
+          CODE_SIGN_IDENTITY: "iPhone Distribution"
+          ONLY_ACTIVE_ARCH: "NO"
       groups: [app]
     dependencies:
       - framework: libapp.a
@@ -148,30 +158,59 @@ targets:
           - $(SRCROOT)/assets
       - script: |
           export PATH="/usr/local/bin:/Users/madniapple/.cargo/bin:$PATH"
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
           ARCHS="${ARCHS:-arm64}"
-          if ! npm run -- tauri ios xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths "${FRAMEWORK_SEARCH_PATHS:?}" --header-search-paths "${HEADER_SEARCH_PATHS:?}" --gcc-preprocessor-definitions "${GCC_preprocessor_definitions:-}" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS}; then
-            echo "tauri ios xcode-script failed. Checking if pre-compiled libapp.a exists..."
-            for arch in ${ARCHS}; do
-              LIB_PATH="${SRCROOT}/Externals/${arch}/${CONFIGURATION}/libapp.a"
-              if [ -s "$LIB_PATH" ] && [ "$(wc -c < "$LIB_PATH")" -gt 100 ]; then
-                echo "Found existing valid libapp.a at $LIB_PATH. Proceeding with existing library."
-              else
-                echo "Error: No valid libapp.a found at $LIB_PATH and xcode-script failed."
-                exit 1
-              fi
+
+          # Find npm
+          NPM_BIN="$(which npm 2>/dev/null || echo '')"
+          if [ -z "${NPM_BIN}" ]; then
+            for p in /usr/local/bin/npm /opt/homebrew/bin/npm ~/.nvm/versions/node/*/bin/npm; do
+              [ -f "$p" ] && NPM_BIN="$p" && break
             done
           fi
+          echo "Using npm: ${NPM_BIN}"
+
+          if [ -z "${NPM_BIN}" ]; then
+            echo "ERROR: npm not found! Cannot build Rust code."
+            exit 1
+          fi
+
+          if ! "${NPM_BIN}" run -- tauri ios xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths "${FRAMEWORK_SEARCH_PATHS:?}" --header-search-paths "${HEADER_SEARCH_PATHS:?}" --gcc-preprocessor-definitions "${GCC_preprocessor_definitions:-}" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS}; then
+            echo "tauri ios xcode-script failed. Checking if pre-compiled libapp.a exists..."
+            BUILD_FAILED=0
+            for arch in ${ARCHS}; do
+              LIB_PATH="${SRCROOT}/Externals/${arch}/${CONFIGURATION}/libapp.a"
+              LIB_SIZE=$(wc -c < "$LIB_PATH" 2>/dev/null || echo 0)
+              if [ -s "$LIB_PATH" ] && [ "$LIB_SIZE" -gt 1000 ]; then
+                echo "✅ Found existing valid libapp.a for ${arch} (${LIB_SIZE} bytes). Using it."
+              else
+                echo "❌ No valid libapp.a for ${arch} at $LIB_PATH"
+                BUILD_FAILED=1
+              fi
+            done
+            if [ "$BUILD_FAILED" -eq 1 ]; then
+              echo "======================================================================"
+              echo "❌ FATAL: Rust build failed and no pre-compiled library found!"
+              echo "Please run this FIRST in terminal before archiving:"
+              echo "  npm run ios:release"
+              echo "======================================================================"
+              exit 1
+            fi
+          fi
+
           echo "Performing library surgery to remove duplicate FFI symbols..."
           for arch in ${ARCHS}; do
             echo "Processing architecture: ${arch}"
-            if [ -d "${SRCROOT}/Externals/${arch}/${CONFIGURATION}" ]; then
-              cd "${SRCROOT}/Externals/${arch}/${CONFIGURATION}" || continue
-              if [ -f libapp.a ]; then
-                echo "Before surgery size of libapp.a is:"
-                ls -lh libapp.a
-              else
-                echo "Warning: libapp.a does not exist in $(pwd)!"
+            LIB_DIR="${SRCROOT}/Externals/${arch}/${CONFIGURATION}"
+            if [ -d "${LIB_DIR}" ] && [ -f "${LIB_DIR}/libapp.a" ]; then
+              LIB_SIZE=$(wc -c < "${LIB_DIR}/libapp.a")
+              echo "libapp.a size: ${LIB_SIZE} bytes"
+              if [ "$LIB_SIZE" -lt 1000 ]; then
+                echo "Warning: libapp.a for ${arch} is too small (${LIB_SIZE} bytes), skipping surgery."
+                continue
               fi
+              cd "${LIB_DIR}" || continue
               mkdir -p temp_extract
               cd temp_extract || continue
               ar -x ../libapp.a
@@ -179,13 +218,13 @@ targets:
               ar -rcs ../libapp.a *.o
               cd ..
               rm -rf temp_extract
+              echo "✅ Library surgery done for ${arch}"
             else
-              echo "Directory for ${arch} does not exist, skipping library surgery."
+              echo "Directory/library for ${arch} does not exist, skipping."
             fi
           done
           echo "Library surgery completed!"
         name: Build Rust Code
         basedOnDependencyAnalysis: false
         outputFiles:
-          - $(SRCROOT)/Externals/x86_64/${CONFIGURATION}/libapp.a
           - $(SRCROOT)/Externals/arm64/${CONFIGURATION}/libapp.a
