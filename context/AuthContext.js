@@ -134,12 +134,21 @@ export function AuthProvider({ children }) {
                 provider.setCustomParameters({ login_hint: lastEmail });
             }
 
-            // Dynamic import signInWithPopup + resolver only on desktop web path.
+            // Dynamic import auth methods + resolver only on web path.
             // This prevents gapi.iframes from ever loading on Tauri iOS.
-            const [{ signInWithPopup }, resolver] = await Promise.all([
+            const [{ signInWithPopup, signInWithRedirect }, resolver] = await Promise.all([
                 import(/* webpackPrefetch: false, webpackPreload: false */ "firebase/auth"),
                 getBrowserPopupRedirectResolver(),
             ]);
+
+            const isMobileWeb = typeof window !== "undefined" && !window.__TAURI_INTERNALS__ && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            if (isMobileWeb) {
+                await signInWithRedirect(auth, provider, resolver);
+                // Return a never-resolving promise to keep the UI in loading state while the browser redirects
+                return new Promise(() => {});
+            }
+
             const result = await signInWithPopup(auth, provider, resolver);
             const email = result?.user?.email;
             if (email) localStorage.setItem("lastGoogleEmail", email);

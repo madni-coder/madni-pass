@@ -587,8 +587,8 @@ export default function AuthPage() {
       "auth/network-request-failed":
         "Please check your internet connection and try again.",
       "auth/too-many-requests": "Too many requests. Please try again later.",
-      "auth/user-disabled": "This account has been disabled.",
-    })[code] ?? "Sign in failed. Please try again.";
+      "auth/unauthorized-domain": "This domain is not authorized in Firebase.",
+    })[code] ?? `Sign in failed (${code || "unknown"}). Please try again.`;
 
   const handleGoogle = async () => {
     setSigningIn("google");
