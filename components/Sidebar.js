@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FiFolder, FiPlus, FiMoreHorizontal, FiEdit2, FiTrash2, FiLock, FiUnlock, FiMenu, FiX, FiSun, FiMoon, FiSearch, FiSettings, FiExternalLink, FiShield, FiInfo } from "react-icons/fi";
+import { FiFolder, FiPlus, FiMoreHorizontal, FiEdit2, FiTrash2, FiLock, FiUnlock, FiMenu, FiX, FiSun, FiMoon, FiSearch, FiSettings, FiExternalLink, FiShield, FiInfo, FiHelpCircle } from "react-icons/fi";
 import { BiFolderOpen } from "react-icons/bi";
 import { FaPowerOff } from "react-icons/fa";
 import { createFolder, updateFolder, deleteFolder, updateFolderPin, setUserPinHash } from "@/lib/db";
@@ -519,16 +519,27 @@ export default function Sidebar({ folders, setFolders, selectedFolder, onSelectF
                         </div>
 
                         <div className="pt-5 border-t border-border/40 space-y-3.5">
-                            <div className="flex items-center justify-between gap-3 text-xs">
-                                <Link 
-                                    href="/privacy" 
-                                    target="_blank" 
-                                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary font-medium hover:bg-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150"
-                                >
-                                    <FiShield size={14} />
-                                    <span>Privacy Policy</span>
-                                    <FiExternalLink size={11} className="opacity-60" />
-                                </Link>
+                            <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+                                <div className="flex items-center gap-2">
+                                    <Link 
+                                        href="/privacy" 
+                                        target="_blank" 
+                                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary font-medium hover:bg-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150"
+                                    >
+                                        <FiShield size={14} />
+                                        <span>Privacy Policy</span>
+                                        <FiExternalLink size={11} className="opacity-60" />
+                                    </Link>
+                                    <Link 
+                                        href="/support" 
+                                        target="_blank" 
+                                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary font-medium hover:bg-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150"
+                                    >
+                                        <FiHelpCircle size={14} />
+                                        <span>Support</span>
+                                        <FiExternalLink size={11} className="opacity-60" />
+                                    </Link>
+                                </div>
                                 
                                 <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-muted border border-border/60 text-muted-foreground font-mono font-medium">
                                     <FiInfo size={14} className="text-muted-foreground/80" />

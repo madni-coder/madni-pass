@@ -971,6 +971,16 @@ export default function AuthPage() {
                     >
                       Privacy Policy
                     </Link>
+                    {" "}and{" "}
+                    <Link
+                      href="/support"
+                      className="font-semibold hover:underline"
+                      style={{
+                        color: mounted ? primaryColor : "var(--primary)",
+                      }}
+                    >
+                      Support
+                    </Link>
                   </p>
                 </div>
               </div>

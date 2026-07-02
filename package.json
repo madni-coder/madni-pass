@@ -9,7 +9,9 @@
     "lint": "eslint",
     "tauri": "tauri",
     "android:build": "tauri android build --apk --target aarch64 --ci",
-    "ios": "tauri ios"
+    "ios": "tauri ios",
+    "ios:release": "rm -rf src-tauri/gen/apple/Externals && tauri ios build --no-sign",
+    "ios:simulator-release": "rm -rf src-tauri/gen/apple/Externals && tauri ios build --target aarch64-sim --no-sign"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

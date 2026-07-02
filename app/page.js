@@ -366,24 +366,57 @@ export default function Home() {
     return () => { try { window.removeEventListener("masterPasswordSet", handler); } catch { } };
   }, [loadNotes]);
 
-  // ─── Reload folders + notes when network comes back online ───────────────────
+  // ─── Reload folders + notes when network comes back online ─────────────────
   useEffect(() => {
     if (!user) return;
     const handleOnline = () => {
-      console.log("[Home] Network restored — refreshing folders and notes from cloud...");
-      notify("☁️ Back online — syncing data...");
-      // Refresh folders
-      getFolders(user.uid).then((fresh) => {
-        setFolders(fresh);
-        try { localStorage.setItem(`user_folders_${user.uid}`, JSON.stringify(fresh)); } catch (e) { }
-      }).catch(() => { });
-      // Refresh notes (clear memory cache so fresh data is fetched)
-      notesCacheRef.current.clear();
-      loadNotes();
+      console.log("[Home] Network restored — will sync after pending saves complete...");
+      notify("Back online — syncing...");
+
+      // ── Delay 3s: give NoteViewer time to complete any in-flight createNote/updateNote ──
+      setTimeout(async () => {
+        // Refresh folders
+        try {
+          const fresh = await getFolders(user.uid);
+          setFolders(fresh);
+          try { localStorage.setItem(`user_folders_${user.uid}`, JSON.stringify(fresh)); } catch (e) { }
+        } catch (e) { console.warn("[handleOnline] folders refresh failed:", e); }
+
+        // Refresh notes: MERGE Firebase results with local state
+        // so offline-created notes that may still be syncing are never lost
+        try {
+          const cacheName = `user_notes_${user.uid}_${selectedFolder?.id || "all"}`;
+          const fetchPromise = selectedFolder
+            ? getNotes(user.uid, selectedFolder.id)
+            : getAllNotes(user.uid);
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("offline-timeout")), 8000)
+          );
+          const raw = await Promise.race([fetchPromise, timeoutPromise]);
+          const master = user.uid;
+          const fromCloud = raw.map((n) => {
+            const title = decrypt(n.title, master) ?? n.title;
+            const content = decrypt(n.content, master) ?? n.content;
+            return { ...n, title, content };
+          });
+
+          // Merge: keep local notes that aren't in cloud yet (still syncing)
+          setNotes((prev) => {
+            const cloudIds = new Set(fromCloud.map((n) => n.id));
+            const localOnly = prev.filter((n) => !cloudIds.has(n.id) && !n.isPinConfig);
+            const merged = [...fromCloud, ...localOnly];
+            writeNotesCache(selectedFolder, merged);
+            try { localStorage.setItem(cacheName, JSON.stringify(merged)); } catch (e) { }
+            return merged;
+          });
+        } catch (err) {
+          if (err?.message !== "offline-timeout") console.warn("[handleOnline] notes refresh failed:", err);
+        }
+      }, 3000);
     };
     window.addEventListener("online", handleOnline);
     return () => window.removeEventListener("online", handleOnline);
-  }, [user, loadNotes]);
+  }, [user, selectedFolder, loadNotes, writeNotesCache]);
 
   const displayNotes = (viewingBin
     ? notes.filter((n) => n.inBin)
@@ -450,77 +483,82 @@ export default function Home() {
 
   const handleDeleteNote = async (noteToDelete) => {
     if (!noteToDelete) return;
-    try {
-      if (noteToDelete.inBin) {
-        // Delete permanently
-        await deleteNotePermanently(noteToDelete.id);
-        setNotes((prev) => {
-          const nextNotes = prev.filter((note) => note.id !== noteToDelete.id);
-          writeNotesCache(selectedFolder, nextNotes);
-          return nextNotes;
-        });
-        removeCachedNote(noteToDelete.id);
-        updateNoteInLocalCaches(user.uid, noteToDelete, "delete");
-        notify("Note permanently deleted");
-      } else {
-        // Move to Bin
-        await deleteNote(noteToDelete.id);
-        setNotes((prev) => {
-          const nextNotes = prev.map((note) => note.id === noteToDelete.id ? { ...note, inBin: true } : note);
-          writeNotesCache(selectedFolder, nextNotes);
-          return nextNotes;
-        });
-        upsertCachedNote({ ...noteToDelete, inBin: true });
-        updateNoteInLocalCaches(user.uid, noteToDelete, "soft_delete");
-        notify("Note moved to Bin");
-      }
+
+    // ── Optimistic UI update FIRST (works offline too) ──
+    if (noteToDelete.inBin) {
+      // Permanent delete
+      setNotes((prev) => {
+        const nextNotes = prev.filter((note) => note.id !== noteToDelete.id);
+        writeNotesCache(selectedFolder, nextNotes);
+        return nextNotes;
+      });
+      removeCachedNote(noteToDelete.id);
+      updateNoteInLocalCaches(user.uid, noteToDelete, "delete");
+      notify("Note permanently deleted");
       if (activeNote?.id === noteToDelete.id) { setNotepadOpen(false); setActiveNote(null); }
-    } catch (err) {
-      notify("Failed to delete note: " + err.message, "error");
+      // Cloud sync in background
+      deleteNotePermanently(noteToDelete.id).catch((err) =>
+        console.error("[Delete] Cloud permanent delete failed:", err)
+      );
+    } else {
+      // Soft delete (move to Bin)
+      setNotes((prev) => {
+        const nextNotes = prev.map((note) => note.id === noteToDelete.id ? { ...note, inBin: true } : note);
+        writeNotesCache(selectedFolder, nextNotes);
+        return nextNotes;
+      });
+      upsertCachedNote({ ...noteToDelete, inBin: true });
+      updateNoteInLocalCaches(user.uid, noteToDelete, "soft_delete");
+      notify("Note moved to Bin");
+      if (activeNote?.id === noteToDelete.id) { setNotepadOpen(false); setActiveNote(null); }
+      // Cloud sync in background
+      deleteNote(noteToDelete.id).catch((err) =>
+        console.error("[Delete] Cloud soft-delete failed:", err)
+      );
     }
   };
 
   const handleRestoreNote = async (noteToRestore) => {
     if (!noteToRestore) return;
-    try {
-      await restoreNote(noteToRestore.id);
-      setNotes((prev) => {
-        const nextNotes = prev.map((note) => note.id === noteToRestore.id ? { ...note, inBin: false } : note);
-        writeNotesCache(selectedFolder, nextNotes);
-        return nextNotes;
-      });
-      upsertCachedNote({ ...noteToRestore, inBin: false });
-      updateNoteInLocalCaches(user.uid, noteToRestore, "restore");
-      if (activeNote?.id === noteToRestore.id) {
-        setActiveNote({ ...activeNote, inBin: false });
-      }
-      notify("Note restored");
-    } catch (err) {
-      notify("Failed to restore note: " + err.message, "error");
+    // ── Optimistic UI update FIRST (works offline too) ──
+    setNotes((prev) => {
+      const nextNotes = prev.map((note) => note.id === noteToRestore.id ? { ...note, inBin: false } : note);
+      writeNotesCache(selectedFolder, nextNotes);
+      return nextNotes;
+    });
+    upsertCachedNote({ ...noteToRestore, inBin: false });
+    updateNoteInLocalCaches(user.uid, noteToRestore, "restore");
+    if (activeNote?.id === noteToRestore.id) {
+      setActiveNote({ ...activeNote, inBin: false });
     }
+    notify("Note restored");
+    // Cloud sync in background
+    restoreNote(noteToRestore.id).catch((err) =>
+      console.error("[Restore] Cloud restore failed:", err)
+    );
   };
 
   const handleClearBin = async () => {
-    try {
-      const binNotes = notes.filter((n) => n.inBin);
-      if (binNotes.length === 0) {
-        notify("Bin is already empty");
-        return;
-      }
-      await clearBin(user.uid);
-      setNotes((prev) => {
-        const nextNotes = prev.filter((note) => !note.inBin);
-        writeNotesCache(selectedFolder, nextNotes);
-        return nextNotes;
-      });
-      binNotes.forEach((n) => {
-        removeCachedNote(n.id);
-        updateNoteInLocalCaches(user.uid, n, "delete");
-      });
-      notify("Bin cleared");
-    } catch (err) {
-      notify("Failed to clear bin: " + err.message, "error");
+    const binNotes = notes.filter((n) => n.inBin);
+    if (binNotes.length === 0) {
+      notify("Bin is already empty");
+      return;
     }
+    // ── Optimistic UI update FIRST (works offline too) ──
+    setNotes((prev) => {
+      const nextNotes = prev.filter((note) => !note.inBin);
+      writeNotesCache(selectedFolder, nextNotes);
+      return nextNotes;
+    });
+    binNotes.forEach((n) => {
+      removeCachedNote(n.id);
+      updateNoteInLocalCaches(user.uid, n, "delete");
+    });
+    notify("Bin cleared");
+    // Cloud sync in background
+    clearBin(user.uid).catch((err) =>
+      console.error("[ClearBin] Cloud clear failed:", err)
+    );
   };
 
   const getFolderName = (folderId) => folders.find((f) => f.id === folderId)?.name || "";
