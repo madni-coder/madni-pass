@@ -77,22 +77,26 @@ export function AuthProvider({ children }) {
         }
     }, []);
 
+    const [webAuthMethods, setWebAuthMethods] = useState(null);
+
     useEffect(() => {
-        const checkRedirectResult = async () => {
-            const isMobileWeb = typeof window !== "undefined" && !window.__TAURI_INTERNALS__ && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            if (isMobileWeb) {
+        const loadWebAuth = async () => {
+            const isTauri = typeof window !== "undefined" && !!window.__TAURI_INTERNALS__;
+            if (!isTauri) {
                 try {
-                    const [{ getRedirectResult }, resolver] = await Promise.all([
+                    const [{ signInWithPopup, getRedirectResult, OAuthProvider }, resolver] = await Promise.all([
                         import("firebase/auth"),
                         getBrowserPopupRedirectResolver()
                     ]);
+                    setWebAuthMethods({ signInWithPopup, OAuthProvider, resolver });
+                    // Still check for any pending redirects just in case they were initiated previously
                     await getRedirectResult(auth, resolver);
                 } catch (e) {
-                    console.error("[AuthContext] getRedirectResult failed:", e);
+                    console.error("[AuthContext] Failed to load web auth methods:", e);
                 }
             }
         };
-        checkRedirectResult();
+        loadWebAuth();
     }, []);
 
     const signInWithGoogle = async (opts = {}) => {
@@ -152,21 +156,10 @@ export function AuthProvider({ children }) {
                 provider.setCustomParameters({ login_hint: lastEmail });
             }
 
-            // Dynamic import auth methods + resolver only on web path.
-            // This prevents gapi.iframes from ever loading on Tauri iOS.
-            const [{ signInWithPopup, signInWithRedirect }, resolver] = await Promise.all([
-                import(/* webpackPrefetch: false, webpackPreload: false */ "firebase/auth"),
-                getBrowserPopupRedirectResolver(),
-            ]);
-
-            const isMobileWeb = typeof window !== "undefined" && !window.__TAURI_INTERNALS__ && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            
-            if (isMobileWeb) {
-                await signInWithRedirect(auth, provider, resolver);
-                // Return a never-resolving promise to keep the UI in loading state while the browser redirects
-                return new Promise(() => {});
+            if (!webAuthMethods) {
+                throw new Error("Auth methods are still loading, please try again in a moment.");
             }
-
+            const { signInWithPopup, resolver } = webAuthMethods;
             const result = await signInWithPopup(auth, provider, resolver);
             const email = result?.user?.email;
             if (email) localStorage.setItem("lastGoogleEmail", email);
@@ -238,12 +231,14 @@ export function AuthProvider({ children }) {
 
             } else {
                 // Website path: standard Firebase popup
-                const { OAuthProvider, signInWithPopup } = await import("firebase/auth");
+                if (!webAuthMethods) {
+                    throw new Error("Auth methods are still loading, please try again in a moment.");
+                }
+                const { OAuthProvider, signInWithPopup, resolver } = webAuthMethods;
                 const provider = new OAuthProvider("apple.com");
                 provider.addScope("email");
                 provider.addScope("name");
                 
-                const resolver = await getBrowserPopupRedirectResolver();
                 const result = await signInWithPopup(auth, provider, resolver);
                 return result;
             }
