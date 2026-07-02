@@ -3,7 +3,6 @@ options:
   bundleIdPrefix: com.lazynotesApple.com
   deploymentTarget:
     iOS: 14.0
-  defaultConfig: release
 fileGroups: [../../src]
 configs:
   debug: debug
