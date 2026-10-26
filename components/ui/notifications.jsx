@@ -30,7 +30,19 @@ export default function Notifications() {
                         WebkitBackdropFilter: "blur(8px)",
                     }}
                 >
-                    {n.message}
+                    <span>{n.message}</span>
+                    {n.action && (
+                        <button
+                            type="button"
+                            className="ml-3 font-semibold underline pointer-events-auto"
+                            onClick={() => {
+                                n.action.onClick();
+                                setItems((prev) => prev.filter((x) => x.id !== n.id));
+                            }}
+                        >
+                            {n.action.label}
+                        </button>
+                    )}
                 </div>
             ))}
         </div>

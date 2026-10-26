@@ -509,7 +509,7 @@ export default function Home() {
       });
       upsertCachedNote({ ...noteToDelete, inBin: true });
       updateNoteInLocalCaches(user.uid, noteToDelete, "soft_delete");
-      notify("Note moved to Bin");
+      notify("Note moved to Bin", "success", { label: "Undo", onClick: () => handleRestoreNote(noteToDelete) });
       if (activeNote?.id === noteToDelete.id) { setNotepadOpen(false); setActiveNote(null); }
       // Cloud sync in background
       deleteNote(noteToDelete.id).catch((err) =>

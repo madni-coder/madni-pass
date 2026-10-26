@@ -4,7 +4,7 @@ import { createNote, updateNote, updateNotePin, setUserPinHash, updateNotePinSta
 import { storeImage, getImageSrc } from "@/lib/imageStore";
 import { encrypt, decrypt } from "@/lib/crypto";
 import { notify } from "@/lib/notify";
-import { FiSearch, FiX, FiChevronUp, FiChevronDown, FiImage, FiLoader, FiCheck, FiMoreHorizontal, FiHash, FiCopy, FiWifiOff, FiArrowLeft, FiTrash2, FiRotateCcw, FiLock, FiUnlock, FiPlus } from "react-icons/fi";
+import { FiSearch, FiX, FiChevronUp, FiChevronDown, FiImage, FiLoader, FiCheck, FiMoreHorizontal, FiHash, FiCopy, FiWifiOff, FiArrowLeft, FiTrash2, FiRotateCcw, FiCornerUpLeft, FiLock, FiUnlock, FiPlus } from "react-icons/fi";
 import { BsPinAngle, BsPinAngleFill } from "react-icons/bs";
 import PinLockScreen from "./PinLockScreen";
 import CryptoJS from "crypto-js";
@@ -718,7 +718,7 @@ export default function NoteViewer({ note, notes = [], folderId, onSave, onClose
     }, [content]);
 
     const handleSum = () => {
-        const nums = [...content.matchAll(/\d+(?:\.\d+)?/g)].map((m) => parseFloat(m[0]));
+        const nums = [...content.matchAll(/\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?/g)].map((m) => parseFloat(m[0].replace(/,/g, "")));
         if (nums.length === 0) { setSumResult({ nums: [], total: 0 }); return; }
         setSumResult({ nums, total: nums.reduce((a, b) => a + b, 0) });
     };
@@ -728,6 +728,12 @@ export default function NoteViewer({ note, notes = [], folderId, onSave, onClose
         copyToClipboard(full)
             .then(() => notify("Note copied!"))
             .catch((err) => notify("Copy failed: " + err.message, "error"));
+    };
+
+    const handleUndo = () => {
+        taRef.current?.focus();
+        document.execCommand("undo");
+        setMenuOpen(false);
     };
 
     const handleDelete = () => {
@@ -1025,21 +1031,9 @@ export default function NoteViewer({ note, notes = [], folderId, onSave, onClose
 
                 {/* Sum result banner */}
                 {sumResult && (
-                    <div className="flex items-center justify-between gap-3 px-5 py-2.5 border-b border-primary/30 bg-primary/10">
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs text-muted-foreground shrink-0">
-                                {sumResult.nums.length} numbers:
-                            </span>
-                            <div className="flex flex-wrap gap-1">
-                                {sumResult.nums.map((n, i) => (
-                                    <span key={i} className="text-xs px-1.5 py-0.5 rounded bg-primary/20 text-primary font-mono">{n % 1 === 0 ? n : n}</span>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-sm font-bold text-primary">= {sumResult.total % 1 === 0 ? sumResult.total : sumResult.total.toFixed(2)}</span>
-                            <button onClick={() => setSumResult(null)} className="text-muted-foreground hover:text-foreground"><FiX size={13} /></button>
-                        </div>
+                    <div className="flex items-center justify-center gap-3 px-5 py-2.5 border-b border-primary/30 bg-primary/10">
+                        <span className="text-base font-bold text-primary">Total: {sumResult.total % 1 === 0 ? sumResult.total : sumResult.total.toFixed(2)}</span>
+                        <button onClick={() => setSumResult(null)} className="text-muted-foreground hover:text-foreground"><FiX size={13} /></button>
                     </div>
                 )}
 
@@ -1096,6 +1090,14 @@ export default function NoteViewer({ note, notes = [], folderId, onSave, onClose
                             </div>
                         </div>
                     )}
+                    <button
+                        disabled={note?.inBin}
+                        onClick={handleUndo}
+                        title="Undo"
+                        className="w-7 h-7 shrink-0 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                    >
+                        <FiCornerUpLeft size={15} />
+                    </button>
                 </div>
 
                 {/* Scrollable Content Container */}

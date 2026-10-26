@@ -149,6 +149,7 @@ async fn apple_sign_in(hashed_nonce: String) -> Result<String, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .plugin(tauri_plugin_notification::init())
     .plugin(tauri_plugin_google_auth::init())
     .invoke_handler(tauri::generate_handler![send_reset_email, exit_app, log_message, apple_sign_in])
     .setup(|app| {
